@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# mypy
+.mypy_cache/
+
+# data
+data/
+
+# pipenv
+Pipfile.lock
+
+# Docker and Jupyter
+Dockerfile
+.Trash-1000/
+.ipynb_checkpoints/
+*.ipynb
+
+# Graphing
+temp-plot.html
