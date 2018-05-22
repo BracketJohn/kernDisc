@@ -1,7 +1,6 @@
 # kernDisc
 
-`kernDisc` is a library for automated kernel discovery. It aims to find the best composition of kernels in order to represent a timeseries of data,
-written with the univariate case in mind.
+`kernDisc` is a library for automated kernel discovery for **univariate** data. It aims to find the best composition of kernels in order to represent a timeseries.
 
 It is heavily inspired by the PhD thesis of David Duvenaud et. al, and the [automated statistician](https://github.com/jamesrobertlloyd/gp-structure-search) project.
 
@@ -12,7 +11,8 @@ It aims to do a specced down minimal and pythonic version of their project, mayb
 Kernel discovery can be used in the following way:
 
 ```python
-# TODO: Write usage
+> from kerndisc import discovery
+> k = discovery(X, Y)
 ```
 
 ## Install

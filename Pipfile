@@ -7,6 +7,9 @@ name = "pypi"
 
 [packages]
 
+gpflow = "*"
+numpy = "*"
+tensorflow = "*"
 
 
 [dev-packages]
