@@ -1,26 +1,29 @@
-"""Prodive univariate kernel dicovery.
+"""Provide univariate kernel dicovery.
 
 This package provides the modules necessary to execute a univariate structured kernel discovery.
 
 Example
 -------
-To execute kernel discovery, just do:
+To execute kernel structure discovery run:
 
-    $ from kerndisc import discovery
-    $ k = discovery(X, Y)
+    $ from kerndisc import discover
+    $ k = discover(x, y)
 
 This will then execute a kernel discovery search and return the best performing kernel.
 
-"""
-from os import environ
-import logging
+TODO: Finish this once `kerndisc` is done.
 
-from .discovery import discovery
+"""
+import logging
+from os import environ
+
+from ._discover import discover
 
 
 logging.basicConfig(level=environ.get('LOG_LEVEL', 'INFO'),
                     format='%(levelname)-8s [%(asctime)s] %(name)-12s » %(message)s')
+logging.getLogger('flake8').setLevel(logging.ERROR)
 
 __all__ = [
-    'discovery',
+    'discover',
 ]

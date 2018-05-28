@@ -3,8 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# mypy
+# mypy, pytest
 .mypy_cache/
+.coverage*
 
 # data
 data/

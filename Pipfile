@@ -1,21 +1,31 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 gpflow = "*"
 numpy = "*"
+lark-parser = "*"
 tensorflow = "*"
 
-
 [dev-packages]
-
-
+pytest = "*"
+pytest-cov = "*"
+pytest-docstyle = "*"
+"pytest-flake8" = "*"
+pytest-mypy = "==0.3.0"
+"flake8" = "*"
+"flake8-bugbear" = "*"
+"flake8-commas" = "*"
+"flake8-comprehensions" = "*"
+"flake8-import-order" = "*"
+"flake8-pep3101" = "*"
+"flake8-quotes" = "*"
+"pep8-naming" = "*"
+mypy = "==0.560"
+pytest-xdist = "*"
+pydot = "*"
 
 [requires]
-
 python_version = "3.6"
