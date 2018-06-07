@@ -8,6 +8,7 @@ gpflow = "*"
 numpy = "*"
 lark-parser = "*"
 tensorflow = "*"
+pathos = "*"
 
 [dev-packages]
 pytest = "*"

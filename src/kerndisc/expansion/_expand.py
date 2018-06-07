@@ -1,14 +1,15 @@
-"""Module for grammar operations and expansion."""
+"""Module for kernel expression expansion/alteration."""
 import logging
 from typing import List
 
+from ._simplify import simplify_kernel_expressions
 from .grammars import get_current_grammar, get_extender
 
 
 _LOGGER = logging.getLogger(__package__)
 
 
-def expand_kernel_expressions(kernel_expressions: List[str]) -> List[str]:
+def expand_kernel_expressions(kernel_expressions: List[str], simplify: bool=False) -> List[str]:
     """Expand each kernel expression of a list into all its possible expansions allowed by grammar.
 
     Kernels are expanded by the grammar selected via the environment variable `GRAMMAR`. Default grammar is `duvenaud`,
@@ -19,16 +20,23 @@ def expand_kernel_expressions(kernel_expressions: List[str]) -> List[str]:
     kernel_expressions: List[str]
         Kernel expressions to be expanded.
 
+    simplify: bool
+        Whether kernel expressions should be simplified before returning them.
+
     Returns
     -------
-    expanded_kernels: List[str]
+    expanded_expressions: List[str]
         All possible alterations of kernels expressions initially passed to method, according to rules of kernel grammar.
 
     """
-    _LOGGER.info(f'Expanding kernel expressions:\n`{kernel_expressions}`,\nusing grammar `{get_current_grammar()}`.')
-    extender = get_extender()
-    new_expressions = []
-    for kernel_expression in kernel_expressions:
-        new_expressions.extend(extender(kernel_expression))
+    _LOGGER.debug(f'Expanding kernel expressions:\n`{kernel_expressions}`,\nusing grammar `{get_current_grammar()}`.')
 
-    return new_expressions
+    extender = get_extender()
+    expanded_expressions = []
+    for k_exp in kernel_expressions:
+        expanded_expressions.extend(extender(k_exp))
+
+    if simplify:
+        return simplify_kernel_expressions(expanded_expressions)
+
+    return expanded_expressions

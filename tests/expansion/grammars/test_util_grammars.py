@@ -39,3 +39,9 @@ def test_find_closing_bracket():
     assert find_closing_bracket(edge_expressions[1], 0) == 5
     assert find_closing_bracket(edge_expressions[2], 0) == -1
     assert find_closing_bracket(edge_expressions[3], 0) == -1
+
+    # Out of bounds start.
+    assert find_closing_bracket(edge_expressions[0], 100) == -1
+
+    # No closing bracket.
+    assert find_closing_bracket('abc(', 3) == -1

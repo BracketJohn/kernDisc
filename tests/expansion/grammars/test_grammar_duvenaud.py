@@ -4,10 +4,15 @@ import gpflow
 from lark import ParseError, UnexpectedInput
 import pytest
 
-from kerndisc.expansion.grammars._grammar_duvenaud import _extender_subexpressions  # noqa: I202, I100
+from kerndisc.expansion.grammars._grammar_duvenaud import (_extender_subexpressions,  # noqa: I202, I100
+                                                           _IMPLEMENTED_KERNEL_EXPRESSIONS)
 
 
-def test_instantiation(parsers_and_transformers, base_kernels):
+def test_implemented_kernel_expressions(base_kernels):
+    assert set(_IMPLEMENTED_KERNEL_EXPRESSIONS) & set(base_kernels) == set(_IMPLEMENTED_KERNEL_EXPRESSIONS)
+
+
+def test_instantiation(parsers_and_transformers):
     assert 'duvenaud' in parsers_and_transformers
 
     duvenaud = parsers_and_transformers['duvenaud']
@@ -19,10 +24,8 @@ def test_instantiation(parsers_and_transformers, base_kernels):
 
     assert transformer.transform(ast).full_name == gpflow.kernels.Linear(1).full_name
 
-    assert extender('linear') == sorted(base_kernels) + [
-        'linear + constant',
-        '(linear) * constant',
-        '(linear) * (constant + constant)',
+    print(extender('linear'))
+    assert extender('linear') == list(_IMPLEMENTED_KERNEL_EXPRESSIONS) + [
         'linear + cosine',
         '(linear) * cosine',
         '(linear) * (cosine + constant)',
@@ -41,15 +44,15 @@ def test_instantiation(parsers_and_transformers, base_kernels):
         'linear + periodic',
         '(linear) * periodic',
         '(linear) * (periodic + constant)',
-        'linear + rationalquadratic',
-        '(linear) * rationalquadratic',
-        '(linear) * (rationalquadratic + constant)',
         'linear + rbf',
         '(linear) * rbf',
         '(linear) * (rbf + constant)',
         'linear + white',
         '(linear) * white',
         '(linear) * (white + constant)',
+        'linear + rationalquadratic',
+        '(linear) * rationalquadratic',
+        '(linear) * (rationalquadratic + constant)',
         'linear',
     ]
 
@@ -160,7 +163,7 @@ def test_transformer(base_kernels, parser_transformer_duvenaud, k1, k2):
     #     transformer.transform('cw(constant, constant)')
 
 
-def test_complicated_compositions(parser_transformer_duvenaud, base_kernels):
+def test_complicated_compositions(parser_transformer_duvenaud):
     parser, transformer, _ = parser_transformer_duvenaud
 
     # Complicated task parser.
@@ -190,7 +193,7 @@ def test_complicated_compositions(parser_transformer_duvenaud, base_kernels):
     assert set(k_lvl3.children) == {'constant', 'linear', 'white', 'matern12'}
 
 
-def test_duvenauds_tokens(parser_transformer_duvenaud, base_kernels):
+def test_duvenauds_tokens(parser_transformer_duvenaud):
     """Test all tokens from `Automatic Model Construction with Gaussian Processes` by Duvenaud, described in Appendix B.
 
     Changepoints (B8) and Changewindows are currently omitted.
@@ -211,9 +214,9 @@ def test_duvenauds_tokens(parser_transformer_duvenaud, base_kernels):
     # B1, `constant`.
     assert constant_string.count('constant') == 1
 
-    for kernel in base_kernels:
-        # Each kernel must be defined exactly ONCE in basekernels.
-        assert base_kernel_string.count(kernel) == (1 if kernel != 'constant' else 0)
+    for kernel_exp in _IMPLEMENTED_KERNEL_EXPRESSIONS:
+        # Each kernel_exp must be defined exactly ONCE in basekernels.
+        assert base_kernel_string.count(kernel_exp) == (1 if kernel_exp != 'constant' else 0)
 
 
 def test_duvenauds_rules(parser_transformer_duvenaud):
@@ -239,8 +242,8 @@ def test_duvenauds_rules(parser_transformer_duvenaud):
     assert "No token defined for: '*'" in str(ex)
 
     # C3, C8, Is `B` also `S`, `S` also `B`?
-    for kernel in ['constant', 'rbf', 'rationalquadratic']:
-        assert parser.parse(kernel).data == 'kernel'
+    for kernel_exp in ['constant', 'rbf', 'rationalquadratic']:
+        assert parser.parse(kernel_exp).data == 'kernel'
 
     # C4, `CP(S, S)`.
     assert parser.parse('cp(linear, linear)')
@@ -267,19 +270,19 @@ def test_extender_bad_input(parser_transformer_duvenaud):
         assert 'RuntimeError: Called extender with an invalid kernel expression.' in str(ex)
 
 
-def test_extender_simple(parser_transformer_duvenaud, base_kernels):
+def test_extender_simple(parser_transformer_duvenaud):
     parser, transformer, extender = parser_transformer_duvenaud
 
     # Simple expressions.
-    for kernel_expression in base_kernels:
-        res_should_be = sorted(base_kernels)  # C3, C8
+    for kernel_expression in _IMPLEMENTED_KERNEL_EXPRESSIONS:
+        res_should_be = list(_IMPLEMENTED_KERNEL_EXPRESSIONS)  # C3, C8
         c1_c2_c11 = []
         # TODO: Add cp, cw once available.
-        for kernel in sorted(base_kernels):
+        for kernel_exp in _IMPLEMENTED_KERNEL_EXPRESSIONS:
             c1_c2_c11.extend([
-                f'{kernel_expression} + {kernel}',  # C1
-                f'({kernel_expression}) * {kernel}',  # C2
-                f'({kernel_expression}) * ({kernel} + constant)',  # C11
+                f'{kernel_expression} + {kernel_exp}',  # C1
+                f'({kernel_expression}) * {kernel_exp}',  # C2
+                f'({kernel_expression}) * ({kernel_exp} + constant)',  # C11
             ])
         res_should_be.extend(c1_c2_c11)
         res_should_be.append(kernel_expression)  # Introduced by splitting apart products and sums (C9, C10).
@@ -290,19 +293,19 @@ def test_extender_simple(parser_transformer_duvenaud, base_kernels):
             parser.parse(kernel_expression)
 
 
-def test_extender_complex(base_kernels, parser_transformer_duvenaud):
+def test_extender_complex(parser_transformer_duvenaud):
     parser, transformer, extender = parser_transformer_duvenaud
 
     # 1) More complex expressions, works because no `+` or `*` in a `cp`/`cw`/`()`.
     for kernel_expression in ['white + constant', '(rbf) * linear', 'cp(linear, white)', '(cp(cw(rbf, rbf), matern52)) * constant']:
-        res_should_be = sorted(base_kernels)  # C3, C8
+        res_should_be = list(_IMPLEMENTED_KERNEL_EXPRESSIONS)  # C3, C8
         c1_c2_c11 = []
         # TODO: Add cp, cw once available.
-        for kernel in sorted(base_kernels):
+        for kernel_exp in _IMPLEMENTED_KERNEL_EXPRESSIONS:
             c1_c2_c11.extend([
-                f'{kernel_expression} + {kernel}',  # C1
-                f'({kernel_expression}) * {kernel}',  # C2
-                f'({kernel_expression}) * ({kernel} + constant)',  # C11
+                f'{kernel_expression} + {kernel_exp}',  # C1
+                f'({kernel_expression}) * {kernel_exp}',  # C2
+                f'({kernel_expression}) * ({kernel_exp} + constant)',  # C11
             ])
         res_should_be.extend(c1_c2_c11)
 
@@ -323,7 +326,7 @@ def test_extender_complex(base_kernels, parser_transformer_duvenaud):
             parser.parse(kernel_expression)
 
     # 2) Randomly generate kernel expressions and select `n` different of them.
-    expression = choice(list(base_kernels))
+    expression = choice(_IMPLEMENTED_KERNEL_EXPRESSIONS)
     for _depth in range(50):
         expression = choice(extender(expression))
         ast = parser.parse(expression)

@@ -2,25 +2,32 @@
 
 `kerndisc` is a library for automated kernel structure discovery in **univariate** data. It aims to find the best composition of kernels in order to represent a time series.
 
-It is heavily inspired by the PhD thesis of David Duvenaud et. al, and the [automated statistician](https://github.com/jamesrobertlloyd/gp-structure-search) project.
+It is heavily inspired by the PhD thesis of David Duvenaud et al., and the [automated statistician](https://github.com/jamesrobertlloyd/gp-structure-search) project.
 
-It aims to be a spec'd down, minimal and pythonic version of their project. In the future it is planned to bring down evaluation cost to `O(n^2)`, by employing upper, lower bound estimation as introduced by [Kim et. all](https://arxiv.org/abs/1706.02524).
+It aims to be a spec'd down, minimal and pythonic version of their project. In the future it is planned to bring down evaluation cost to `O(n^2)`, by employing upper, lower bound estimation as introduced by [Kim et al.](https://arxiv.org/abs/1706.02524).
 
 ## Usage
 
 `kerndisc` can be used in the following way:
 
 ```python
-$ from kerndisc import discover
-$ k = discover(X, Y)
+> from kerndisc import discover
+> k = discover(X, Y)
 ```
 
-To populate the search space, i.e., the possible combinations of kernels that are explored, `kerndisc` uses a grammar from `kerndisc.expansion.grammars`. 
+For scoring the computers CPU cores are used. By default only one core is used, setting the environment variable `CORES=n` results in `n` cores being used, giving a significant speedup. Custom metrics can be defined.
 
-It is possible to define your own grammar for discovery. 
+To populate the search space, i.e., the possible combinations of kernels that are explored, `kerndisc` uses a grammar from `kerndisc.expansion.grammars`.
 
+It is also possible to define your own grammar for discovery and search space population. 
 
-### Defining you own Grammar
+### Defining your own Metric
+
+A new metric can be implemented in the `kerndisc.evaluation.scoring._metrics` module, afterwards it can be imported and added to the `_METRICS` dictionary in the packages `__init__`. Then it can be selected for training by setting the environment variable `METRIC` to its name.
+
+All metrics MUST be minimization problems, i.e., be better when lower.
+
+### Defining your own Grammar
 
 To define a new grammar, please create a new module in `kerndisc.expansion.grammars` called `_grammar_*.py`. This new module MUST offer:
 
@@ -31,11 +38,11 @@ To define a new grammar, please create a new module in `kerndisc.expansion.gramm
 
 It is advised to use the `lark-parser` to define new grammars, as it is the one used by this project.
 
-Once your custom grammar is created, you can select it by adding it to the `GRAMMAR` dictionary in `kerndisc/expansion/grammars/__init__.py` and then setting the environment variable `GRAMMAR` to your grammars name.
+Once your custom grammar is created, you can select it by adding it to the `GRAMMAR` dictionary in `kerndisc.expansion.grammars.__init__.py` and then setting the environment variable `GRAMMAR` to your grammars name.
 
 See:
-* `kerndisc/expansion/grammars/__init__.py` for general concept and description,
-* `kerndisc/expansion/grammars/_grammar_duvenaud.py` for an example of a grammar.
+* `kerndisc.expansion.grammars.__init__.py` for general concept and description,
+* `kerndisc.expansion.grammars._grammar_duvenaud.py` for an example of a grammar.
 
 
 ## Installation
@@ -49,10 +56,10 @@ See:
 `pipenv` is used for development. Please install it via `pip` if necessary. Usage:
 
 ```
-$ git clone https://github.com/BracketJohn/kernDisc
-$ cd kernDisc
-$ pipenv install --dev
-$ pipenv shell
+> git clone https://github.com/BracketJohn/kernDisc
+> cd kernDisc
+> pipenv install --dev
+> pipenv shell
 ```
 
 This will install all necessary packages, create a new virtual environment and enter it. From there one can start to develop and test.
@@ -61,7 +68,7 @@ This will install all necessary packages, create a new virtual environment and e
 
 Tests can be executed by running the following:
 ```
-$ pytest
+> pytest
 ```
 
 Depending on your environment, it might be necessary to do this in a `pipenv shell`.

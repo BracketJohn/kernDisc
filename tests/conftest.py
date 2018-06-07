@@ -1,8 +1,8 @@
 """Fixtures for tests."""
-from gpflow.kernels import (Constant,
-                            # ArcCosine,
+from gpflow.kernels import (ArcCosine,
+                            Constant,
                             Cosine,
-                            # Exponential,
+                            Exponential,
                             Linear,
                             Matern12,
                             Matern32,
@@ -24,10 +24,10 @@ def parsers_and_transformers():
 @pytest.fixture(scope='session')
 def base_kernels():
     return {
-        # 'arccosine': ArcCosine,
+        'arccosine': ArcCosine,
         'constant': Constant,
         'cosine': Cosine,                        # B6 `cos`
-        # 'exponential': Exponential,
+        'exponential': Exponential,
         'linear': Linear,                        # B4 `Lin`
         'matern12': Matern12,                    # Additional kernel `matern12`,
         'matern32': Matern32,                    # additional kernel `matern32`,

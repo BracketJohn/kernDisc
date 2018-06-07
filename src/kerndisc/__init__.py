@@ -23,6 +23,7 @@ from ._discover import discover
 logging.basicConfig(level=environ.get('LOG_LEVEL', 'INFO'),
                     format='%(levelname)-8s [%(asctime)s] %(name)-12s » %(message)s')
 logging.getLogger('flake8').setLevel(logging.ERROR)
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 __all__ = [
     'discover',

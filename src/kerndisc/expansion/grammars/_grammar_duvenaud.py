@@ -9,58 +9,52 @@ from ._kernels import BASE_KERNELS
 from ._util import find_closing_bracket
 
 
+_IMPLEMENTED_KERNEL_EXPRESSIONS = ('cosine', 'linear', 'matern12', 'matern32', 'matern52', 'periodic', 'rbf', 'white', 'rationalquadratic')
 _LOGGER = logging.getLogger(__package__)
-GRAMMAR = """// This kernel grammar is a close implementation of the grammar first defined by David Duvenaud et al. [2013],
-             // in their paper: [Structure discovery in Nonparametric Regression through Compositional Kernel Search](https://arxiv.org/pdf/1302.4922.pdf) and
-             // also described in `Automatic Model Construction with Gaussian Processes`, the PhD thesis by Duvenaud.
+GRAMMAR = f"""// This kernel grammar is a close implementation of the grammar first defined by David Duvenaud et al. [2013],
+              // in their paper: [Structure discovery in Nonparametric Regression through Compositional Kernel Search](https://arxiv.org/pdf/1302.4922.pdf) and
+              // also described in `Automatic Model Construction with Gaussian Processes`, the PhD thesis by Duvenaud.
 
-             // Grammar was extended by additional kernels (maternXX), we also force brackets every time we multiply here.
+              // Grammar was extended by additional kernels (maternXX), we also force brackets every time we multiply here.
 
-             // CX stands for implementation of rule CX from Appendix C of
-             // `Automatic Model Construction with Gaussian Processes`.
+              // CX stands for implementation of rule CX from Appendix C of
+              // `Automatic Model Construction with Gaussian Processes`.
 
-             ?kernel: base_kernel // C3, C8
-                    | constant // C3, C8
-                    | sum
-                    | product
-                    | lax_product
-                    | changepoint
-                    | changewindow
+              ?kernel: base_kernel // C3, C8
+                     | constant // C3, C8
+                     | sum
+                     | product
+                     | lax_product
+                     | changepoint
+                     | changewindow
 
-             ?sum: kernel "+" base_kernel -> add // C1
-                 | kernel "+" constant -> add // C1
-                 | kernel "+" changepoint -> add // C1
-                 | kernel "+" changewindow -> add // C1
+              ?sum: kernel "+" base_kernel -> add // C1
+                  | kernel "+" constant -> add // C1
+                  | kernel "+" changepoint -> add // C1
+                  | kernel "+" changewindow -> add // C1
 
-             ?product: "(" kernel ")" "*" base_kernel -> mul // C2
-                     | "(" kernel ")" "*" constant -> mul // C2
-                     | "(" kernel ")" "*" changepoint -> mul // C2
-                     | "(" kernel ")" "*" changewindow -> mul // C2
+              ?product: "(" kernel ")" "*" base_kernel -> mul // C2
+                      | "(" kernel ")" "*" constant -> mul // C2
+                      | "(" kernel ")" "*" changepoint -> mul // C2
+                      | "(" kernel ")" "*" changewindow -> mul // C2
 
-             ?lax_product: "(" kernel ")" "*" "(" base_kernel "+" constant ")" -> lax_mul // C11
-                         | "(" kernel ")" "*" "(" constant "+" base_kernel ")" -> lax_mul // C11
-                         | "(" kernel ")" "*" "(" constant "+" constant ")" -> lax_mul // C11
+              ?lax_product: "(" kernel ")" "*" "(" base_kernel "+" constant ")" -> lax_mul // C11
+                          | "(" kernel ")" "*" "(" constant "+" base_kernel ")" -> lax_mul // C11
+                          | "(" kernel ")" "*" "(" constant "+" constant ")" -> lax_mul // C11
 
-             ?changepoint: "cp" "(" kernel "," kernel ")" -> cp // C4
+              ?changepoint: "cp" "(" kernel "," kernel ")" -> cp // C4
 
-             ?changewindow: "cw" "(" kernel "," kernel ")" -> cw // C5, C6, C7
+              ?changewindow: "cw" "(" kernel "," kernel ")" -> cw // C5, C6, C7
 
-             ?base_kernel: BASE_KERNEL -> kernel
-             ?constant: CONSTANT -> kernel
+              ?base_kernel: BASE_KERNEL -> kernel
+              ?constant: CONSTANT -> kernel
 
-             BASE_KERNEL: "cosine"
-                        | "linear"
-                        | "matern12"
-                        | "matern32"
-                        | "matern52"
-                        | "periodic"
-                        | "rbf"
-                        | "white"
-                        | "rationalquadratic"
-             CONSTANT: "constant"
+              BASE_KERNEL: {' | '.join([f'"{kernel_exp}"' for kernel_exp in _IMPLEMENTED_KERNEL_EXPRESSIONS])}
 
-             %import common.WS
-             %ignore WS
+              CONSTANT: "constant"
+
+              %import common.WS
+              %ignore WS
             """
 
 
@@ -74,10 +68,6 @@ def parser() -> Lark:
 
     """
     return Lark(GRAMMAR, start='kernel')
-
-
-def _get_kernels_duvenaud() -> List[str]:
-    pass
 
 
 def extender(kernel_expression: str) -> List[str]:
@@ -135,20 +125,19 @@ def extender(kernel_expression: str) -> List[str]:
     kernel_alterations: List[str] = []
 
     # C3, C8
-    kernel_alterations.extend(sorted(BASE_KERNELS))
+    kernel_alterations.extend(_IMPLEMENTED_KERNEL_EXPRESSIONS)
 
     # TODO: Re-add changepoints, changewindows once implemented.
-    for kernel in sorted(BASE_KERNELS):
+    for kernel_exp in _IMPLEMENTED_KERNEL_EXPRESSIONS:
         kernel_alterations.extend([
-            f'{kernel_expression} + {kernel}',                  # C1
-            f'({kernel_expression}) * {kernel}',                # C2
-            # f'cp({kernel_expression}, {kernel_expression})',  # C4
-            # f'cw({kernel}, {kernel}',                         # C5
-            # f'cw({kernel}, constant)',                        # C6
-            # f'cw(constant, {kernel})',                        # C7
-            f'({kernel_expression}) * ({kernel} + constant)',   # C11
+            f'{kernel_expression} + {kernel_exp}',                  # C1
+            f'({kernel_expression}) * {kernel_exp}',                # C2
+            # f'cp({kernel_expression}, {kernel_expression})',      # C4
+            # f'cw({kernel_expression}, {kernel_expression}',       # C5
+            # f'cw({kernel_expression}, constant)',                 # C6
+            # f'cw(constant, {kernel_expression})',                 # C7
+            f'({kernel_expression}) * ({kernel_exp} + constant)',   # C11
         ])
-
     # C9, C10
     kernel_alterations.extend(_extender_subexpressions(kernel_expression))
 

@@ -2,10 +2,10 @@
 from typing import Dict
 
 import gpflow
-from gpflow.kernels import (Constant,
-                            # ArcCosine,
+from gpflow.kernels import (ArcCosine,
+                            Constant,
                             Cosine,
-                            # Exponential,
+                            Exponential,
                             Linear,
                             Matern12,
                             Matern32,
@@ -22,11 +22,10 @@ SPECIAL_KERNELS: Dict[str, gpflow.kernels.Kernel] = {
     'cp': 'PLACEHOLDER',
     'cw': 'PLACEHOLDER',
 }
-# TODO: Re-add kernels once interesting.
 BASE_KERNELS: Dict[str, gpflow.kernels.Kernel] = {
-    # 'arccosine': ArcCosine,
+    'arccosine': ArcCosine,
     'cosine': Cosine,
-    # 'exponential': Exponential,
+    'exponential': Exponential,
     'linear': Linear,
     'matern12': Matern12,
     'matern32': Matern32,
