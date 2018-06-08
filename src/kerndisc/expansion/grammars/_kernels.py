@@ -3,6 +3,7 @@ from functools import reduce
 from typing import Dict
 
 import gpflow
+from gpflow import Param
 from gpflow.kernels import (ArcCosine,
                             Combination,
                             Constant,
@@ -16,7 +17,6 @@ from gpflow.kernels import (ArcCosine,
                             RationalQuadratic,
                             RBF,
                             White)
-from gpflow.params import Param
 import tensorflow as tf
 
 
