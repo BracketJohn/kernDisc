@@ -1,3 +1,4 @@
+
 import logging
 from typing import Dict, List
 
@@ -5,11 +6,19 @@ import gpflow
 from lark import Lark, ParseError, Transformer, UnexpectedInput
 from lark.lexer import Token
 
-from ._kernels import BASE_KERNELS
+from ._kernels import BASE_KERNELS, ChangePoint
 from ._util import find_closing_bracket
 
 
-_IMPLEMENTED_KERNEL_EXPRESSIONS = ('cosine', 'linear', 'matern12', 'matern32', 'matern52', 'periodic', 'rbf', 'white', 'rationalquadratic')
+_IMPLEMENTED_KERNEL_EXPRESSIONS = ('cosine',
+                                   'linear',
+                                   'matern12',
+                                   'matern32',
+                                   'matern52',
+                                   'periodic',
+                                   'rbf',
+                                   'white',
+                                   'rationalquadratic')
 _LOGGER = logging.getLogger(__package__)
 GRAMMAR = f"""// This kernel grammar is a close implementation of the grammar first defined by David Duvenaud et al. [2013],
               // in their paper: [Structure discovery in Nonparametric Regression through Compositional Kernel Search](https://arxiv.org/pdf/1302.4922.pdf) and
@@ -132,7 +141,7 @@ def extender(kernel_expression: str) -> List[str]:
         kernel_alterations.extend([
             f'{kernel_expression} + {kernel_exp}',                  # C1
             f'({kernel_expression}) * {kernel_exp}',                # C2
-            # f'cp({kernel_expression}, {kernel_expression})',      # C4
+            f'cp({kernel_expression}, {kernel_expression})',        # C4
             # f'cw({kernel_expression}, {kernel_expression}',       # C5
             # f'cw({kernel_expression}, constant)',                 # C6
             # f'cw(constant, {kernel_expression})',                 # C7
@@ -241,7 +250,7 @@ class KernelTransformer(Transformer):
 
     def cp(self, kernels: List[gpflow.kernels.Kernel]):  # pragma: no cover
         """Changepoint from the first kernel to the second kernel in the above list."""
-        raise NotImplementedError
+        return ChangePoint(kernels[0], kernels[1], offset=1600., variance=5.0)
 
     def cw(self, kernels: List[gpflow.kernels.Kernel]):  # pragma: no cover
         """Changewindow from the first kernel to the second kernel in the above list."""

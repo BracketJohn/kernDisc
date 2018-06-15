@@ -92,6 +92,28 @@ def get_transformer() -> Transformer:
 
 
 @lru_cache(maxsize=1)
+def get_builder() -> Callable:
+    """Get a builder that parses and transforms a kernel expression.
+
+    Mostly a utility function that combines `parser.parse` and `transformer.transform`.
+
+    Returns
+    -------
+    builder: Callable
+        Builder to parse and transform (build) a kernel in one step on call.
+
+
+    """
+    parser = get_parser()
+    transformer = get_transformer()
+
+    def _build(kernel_expression: str) -> gpflow.kernels.Kernel:
+        """Functions that parses and transforms a kernel expression in one step using the current grammar."""
+        return transformer.transform(parser.parse(kernel_expression))
+    return _build
+
+
+@lru_cache(maxsize=1)
 def get_extender() -> Callable:
     """Get extender of currently selected grammar.
 

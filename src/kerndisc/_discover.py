@@ -6,6 +6,7 @@ import numpy as np
 from ._preprocessing import preprocess
 from ._util import n_best_scored_kernel_expressions
 from .evaluation import evaluate
+from .evaluation.scoring import get_current_metric
 from .expansion import expand_kernel_expressions
 
 
@@ -63,7 +64,7 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, kernels_per_dep
             } for k_exp in expanded_exps if k_exp not in scored_kernel_expressions
         }
 
-        _LOGGER.info(f'Depth `{depth}`: Scoring unscored kernels.')
+        _LOGGER.info(f'Depth `{depth}`: Scoring unscored kernels using metric `{get_current_metric()}`.')
 
         if unscored_exps:
             for k_exp, score in evaluate(x, y, list(unscored_exps)):

@@ -9,7 +9,7 @@ from tensorflow import errors as tf_errors
 
 from ._util import add_jitter_to_model
 from .scoring import score_model
-from ..expansion.grammars import get_parser, get_transformer
+from ..expansion.grammars import get_builder
 
 
 _CORES = int(os.environ.get('CORES', 1))
@@ -85,8 +85,7 @@ def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
         Evaluates a kernel expression passed to it.
 
     """
-    parser = get_parser()
-    transformer = get_transformer()
+    build = get_builder()
     optimizer = gpflow.train.ScipyOptimizer()
 
     def _evaluator(kernel_expression) -> Tuple[str, float]:
@@ -101,8 +100,7 @@ def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
             Kernel expression to be evaluated.
 
         """
-        kernel = transformer.transform(parser.parse(kernel_expression))
-        model = gpflow.models.GPR(x, y, kern=kernel)
+        model = gpflow.models.GPR(x, y, kern=build(kernel_expression))
         if add_jitter:
             add_jitter_to_model(model)
 
