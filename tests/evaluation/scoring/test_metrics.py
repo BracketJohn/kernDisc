@@ -46,4 +46,4 @@ def test_difference_bic_duvenaud():
     # This holds because `k` contains a product.
     assert bayesian_information_criterion_duvenaud(m) < bayesian_information_criterion(m)
 
-    # TODO: Add CP and CW differenc echecks here, once applicable.
+    # TODO: Add CP and CW differenc checks here, once implemented.

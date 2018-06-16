@@ -2,14 +2,13 @@
 import logging
 from typing import List
 
-from ._simplify import simplify_kernel_expressions
 from .grammars import get_current_grammar, get_extender
 
 
 _LOGGER = logging.getLogger(__package__)
 
 
-def expand_kernel_expressions(kernel_expressions: List[str], simplify: bool=False) -> List[str]:
+def expand(kernel_expressions: List[str]) -> List[str]:
     """Expand each kernel expression of a list into all its possible expansions allowed by grammar.
 
     Kernels are expanded by the grammar selected via the environment variable `GRAMMAR`. Default grammar is `duvenaud`,
@@ -19,9 +18,6 @@ def expand_kernel_expressions(kernel_expressions: List[str], simplify: bool=Fals
     ----------
     kernel_expressions: List[str]
         Kernel expressions to be expanded.
-
-    simplify: bool
-        Whether kernel expressions should be simplified before returning them.
 
     Returns
     -------
@@ -35,8 +31,5 @@ def expand_kernel_expressions(kernel_expressions: List[str], simplify: bool=Fals
     expanded_expressions = []
     for k_exp in kernel_expressions:
         expanded_expressions.extend(extender(k_exp))
-
-    if simplify:
-        return simplify_kernel_expressions(expanded_expressions)
 
     return expanded_expressions

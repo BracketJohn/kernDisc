@@ -15,15 +15,9 @@ from gpflow.kernels import (ArcCosine,
                             RBF,
                             White)
 
-_CONSTANT: Dict[str, gpflow.kernels.Kernel] = {
-    'constant': Constant,
-}
-SPECIAL_KERNELS: Dict[str, gpflow.kernels.Kernel] = {
-    'cp': 'PLACEHOLDER',
-    'cw': 'PLACEHOLDER',
-}
 BASE_KERNELS: Dict[str, gpflow.kernels.Kernel] = {
     'arccosine': ArcCosine,
+    'constant': Constant,
     'cosine': Cosine,
     'exponential': Exponential,
     'linear': Linear,
@@ -34,5 +28,4 @@ BASE_KERNELS: Dict[str, gpflow.kernels.Kernel] = {
     'rbf': RBF,
     'rationalquadratic': RationalQuadratic,
     'white': White,
-    **_CONSTANT,
 }

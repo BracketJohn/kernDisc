@@ -9,49 +9,32 @@ from ._kernels import BASE_KERNELS
 from ._util import find_closing_bracket
 
 
-_IMPLEMENTED_KERNEL_EXPRESSIONS = ('cosine', 'linear', 'matern12', 'matern32', 'matern52', 'periodic', 'rbf', 'white', 'rationalquadratic')
+_IMPLEMENTED_KERNEL_EXPRESSIONS = ('linear', 'periodic', 'rbf', 'white', 'constant')
 _LOGGER = logging.getLogger(__package__)
 GRAMMAR = f"""// This kernel grammar is a close implementation of the grammar first defined by David Duvenaud et al. [2013],
               // in their paper: [Structure discovery in Nonparametric Regression through Compositional Kernel Search](https://arxiv.org/pdf/1302.4922.pdf) and
-              // also described in `Automatic Model Construction with Gaussian Processes`, the PhD thesis by Duvenaud.
+              // refine in [Automatic Construction and Natural-Language Description of Nonparametric Regression Models](https://arxiv.org/pdf/1402.4304.pdf).
 
-              // Grammar was extended by additional kernels (maternXX), we also force brackets every time we multiply here.
+              // We force brackets every time we multiply. CP and CW are not yet implemented.
 
               // CX stands for implementation of rule CX from Appendix C of
               // `Automatic Model Construction with Gaussian Processes`.
 
               ?kernel: base_kernel // C3, C8
-                     | constant // C3, C8
                      | sum
                      | product
                      | lax_product
-                     | changepoint
-                     | changewindow
 
               ?sum: kernel "+" base_kernel -> add // C1
-                  | kernel "+" constant -> add // C1
-                  | kernel "+" changepoint -> add // C1
-                  | kernel "+" changewindow -> add // C1
 
               ?product: "(" kernel ")" "*" base_kernel -> mul // C2
-                      | "(" kernel ")" "*" constant -> mul // C2
-                      | "(" kernel ")" "*" changepoint -> mul // C2
-                      | "(" kernel ")" "*" changewindow -> mul // C2
 
-              ?lax_product: "(" kernel ")" "*" "(" base_kernel "+" constant ")" -> lax_mul // C11
-                          | "(" kernel ")" "*" "(" constant "+" base_kernel ")" -> lax_mul // C11
-                          | "(" kernel ")" "*" "(" constant "+" constant ")" -> lax_mul // C11
-
-              ?changepoint: "cp" "(" kernel "," kernel ")" -> cp // C4
-
-              ?changewindow: "cw" "(" kernel "," kernel ")" -> cw // C5, C6, C7
+              ?lax_product: "(" kernel ")" "*" "(" base_kernel "+" "constant" ")" -> lax_mul // C11
+                          | "(" kernel ")" "*" "(" "constant" "+" base_kernel ")" -> lax_mul // C11
 
               ?base_kernel: BASE_KERNEL -> kernel
-              ?constant: CONSTANT -> kernel
 
               BASE_KERNEL: {' | '.join([f'"{kernel_exp}"' for kernel_exp in _IMPLEMENTED_KERNEL_EXPRESSIONS])}
-
-              CONSTANT: "constant"
 
               %import common.WS
               %ignore WS
@@ -92,10 +75,6 @@ def extender(kernel_expression: str) -> List[str]:
             'linear + cosine', 'linear + linear', ..., 'linear + rationalquadratic',  # May be added to any other kernel.
             '(linear) * cosine', ..., 'linear * rationalquadratic',  # May be multiplied by any other kernel.
             '(linear) * (cosine + constant)', ..., '(linear) * (rationalquadratic + constant)',  # May apply `lax_product`.
-            # 'cp(linear, linear)',  # cp may be applied.
-            # 'cw(linear, linear)',  # cw may be applied on kernel.
-            # 'cw(linear, constant)',  # cw may be applied on kernel, constant.
-            # 'cw(constant, linear)',  # cw may be applied on constant, kernel.
         ]
         ```
         If `kernel_expression` were to consist out of products or sums, there would be further alterations:
@@ -132,10 +111,6 @@ def extender(kernel_expression: str) -> List[str]:
         kernel_alterations.extend([
             f'{kernel_expression} + {kernel_exp}',                  # C1
             f'({kernel_expression}) * {kernel_exp}',                # C2
-            # f'cp({kernel_expression}, {kernel_expression})',      # C4
-            # f'cw({kernel_expression}, {kernel_expression}',       # C5
-            # f'cw({kernel_expression}, constant)',                 # C6
-            # f'cw(constant, {kernel_expression})',                 # C7
             f'({kernel_expression}) * ({kernel_exp} + constant)',   # C11
         ])
     # C9, C10
@@ -159,12 +134,6 @@ def _extender_subexpressions(kernel_expression: str) -> List[str]:
     `linear + constant` -> ['linear', 'constant'],  # Splitting sums,
     `linear * constant` -> ['linear', 'constant']  # splitting products.
     ```
-
-    This also takes into account `cp`s and `cw`s and parantheses, e.g.:
-    ```
-    `(cp(linear + constant, white)) * rbf` -> ['cp(linear + constant, white)', 'rbf']
-    ```
-    The `+` operator in the changepoint cannot be split.
 
     Parameters
     ----------
@@ -236,7 +205,7 @@ class KernelTransformer(Transformer):
 
     def lax_mul(self, kernels: List[gpflow.kernels.Kernel]):
         """Multiply together a kernel with a kernel and a constant."""
-        _summed = gpflow.kernels.Sum(kernels[1:])
+        _summed = gpflow.kernels.Sum([kernels[1], BASE_KERNELS['constant'](1)])
         return gpflow.kernels.Product([kernels[0], _summed])
 
     def cp(self, kernels: List[gpflow.kernels.Kernel]):  # pragma: no cover

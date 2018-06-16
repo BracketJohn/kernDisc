@@ -33,7 +33,7 @@ from lark import Lark, Transformer
 from ._grammar_duvenaud import (extender as extender_duvenaud,
                                 KernelTransformer as DuvenaudTransformer,
                                 parser as parser_duvenaud)
-from ._kernels import BASE_KERNELS, SPECIAL_KERNELS
+from ._kernels import BASE_KERNELS
 
 
 _DEFAULT_GRAMMAR = 'duvenaud'
@@ -92,6 +92,27 @@ def get_transformer() -> Transformer:
 
 
 @lru_cache(maxsize=1)
+def get_builder() -> Callable:
+    """Get a builder that parses and transforms a kernel expression.
+
+    Mostly a utility function that combines `parser.parse` and `transformer.transform`.
+
+    Returns
+    -------
+    builder: Callable
+        Builder to parse and transform (build) a kernel in one step on call.
+
+    """
+    parser = get_parser()
+    transformer = get_transformer()
+
+    def _build(kernel_expression: str) -> gpflow.kernels.Kernel:
+        """Functions that parses and transforms a kernel expression in one step using the current grammar."""
+        return transformer.transform(parser.parse(kernel_expression))
+    return _build
+
+
+@lru_cache(maxsize=1)
 def get_extender() -> Callable:
     """Get extender of currently selected grammar.
 
@@ -110,11 +131,6 @@ def get_extender() -> Callable:
 def get_kernels() -> Dict[str, gpflow.kernels.Kernel]:
     """Get all kernels available for kernel construction."""
     return BASE_KERNELS
-
-
-def get_special_kernels() -> Dict[str, gpflow.kernels.Kernel]:
-    """Get special kernels available for kernel construction."""
-    return SPECIAL_KERNELS
 
 
 def _get_grammars() -> Dict[str, Dict[str, Union[Lark, Transformer]]]:

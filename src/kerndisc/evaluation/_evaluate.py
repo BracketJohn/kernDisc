@@ -4,12 +4,11 @@ from typing import Callable, Generator, List, Tuple
 
 import gpflow
 import numpy as np
-from pathos.multiprocessing import ProcessingPool
 from tensorflow import errors as tf_errors
 
 from ._util import add_jitter_to_model
 from .scoring import score_model
-from ..expansion.grammars import get_parser, get_transformer
+from ..expansion.grammars import get_builder
 
 
 _CORES = int(os.environ.get('CORES', 1))
@@ -49,15 +48,11 @@ def evaluate(x: np.ndarray, y: np.ndarray, kernel_expressions: List[str], add_ji
         Yield `kernel_expression, score` for each kernel expression initially passed to `evaluate`.
 
     """
-    k_exp_count = len(kernel_expressions)
-    evaluator = _make_evaluator(x, y, add_jitter)
+    evaluate = _make_evaluator(x, y, add_jitter)
 
-    # Shuffle kernel expressions to distribute computational load.
-    np.random.shuffle(kernel_expressions)
-
-    for optimized, (kernel_expression, score) in enumerate(ProcessingPool(nodes=min(_CORES, k_exp_count)).imap(evaluator, kernel_expressions)):
-        _LOGGER.info(f'`{optimized + 1}/{k_exp_count}`: Done with scoring of `{kernel_expression}`.')
-        yield kernel_expression, score
+    for optimized, kernel_expression in enumerate(kernel_expressions):
+        yield kernel_expression, evaluate(kernel_expression)
+        _LOGGER.info(f'`{optimized + 1}/{len(kernel_expressions)}`: Done with scoring of `{kernel_expression}`.')
 
 
 def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
@@ -85,11 +80,10 @@ def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
         Evaluates a kernel expression passed to it.
 
     """
-    parser = get_parser()
-    transformer = get_transformer()
+    build = get_builder()
     optimizer = gpflow.train.ScipyOptimizer()
 
-    def _evaluator(kernel_expression) -> Tuple[str, float]:
+    def _evaluate(kernel_expression: str) -> float:
         """Build, optimize and score a single kernel expression.
 
         If Cholesky decomposition for optimization is not successfull,
@@ -100,9 +94,13 @@ def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
         kernel_expression: str
             Kernel expression to be evaluated.
 
+        Returns
+        -------
+        score: float
+            Score of kernel expression, calculated using current metric.
+
         """
-        kernel = transformer.transform(parser.parse(kernel_expression))
-        model = gpflow.models.GPR(x, y, kern=kernel)
+        model = gpflow.models.GPR(x, y, kern=build(kernel_expression))
         if add_jitter:
             add_jitter_to_model(model)
 
@@ -110,7 +108,7 @@ def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
             optimizer.minimize(model)
         except tf_errors.InvalidArgumentError:
             _LOGGER.debug(f'Cholesky decomposition failed for: {kernel_expression}.')
-            return kernel_expression, np.Inf
-        return kernel_expression, score_model(model)
+            return np.Inf
+        return score_model(model)
 
-    return _evaluator
+    return _evaluate

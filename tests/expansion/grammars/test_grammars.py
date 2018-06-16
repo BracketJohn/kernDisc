@@ -4,11 +4,11 @@ from typing import Callable
 from lark import Lark, Transformer
 
 from kerndisc.expansion.grammars import (_DEFAULT_GRAMMAR,  # noqa: I202, I100
+                                         get_builder,
                                          get_current_grammar,
                                          get_extender,
                                          get_kernels,
                                          get_parser,
-                                         get_special_kernels,
                                          get_transformer)
 
 
@@ -37,5 +37,8 @@ def test_get_kernels(base_kernels):
     assert get_kernels() == base_kernels
 
 
-def test_get_special_kernels(special_kernels):
-    assert get_special_kernels() == special_kernels
+def test_get_builder(parser_transformer_extender_duvenaud):
+    build = get_builder()
+    parser, transformer, _ = parser_transformer_extender_duvenaud
+
+    assert build('linear').name == transformer.transform(parser.parse('linear')).name

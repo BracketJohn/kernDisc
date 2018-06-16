@@ -40,14 +40,11 @@ def base_kernels():
 
 
 @pytest.fixture(scope='session')
-def special_kernels():
-    return {
-        'cp': 'PLACEHOLDER',
-        'cw': 'PLACEHOLDER',
-    }
+def available_metrics():
+    return {'log_likelihood', 'bayesian_information_criterion', 'bayesian_information_criterion_duvenaud'}
 
 
 @pytest.fixture(scope='session')
-def parser_transformer_duvenaud():
+def parser_transformer_extender_duvenaud():
     duvenaud = parsers_and_transformers()['duvenaud']
     return duvenaud['parser'](), duvenaud['transformer'](), duvenaud['extender']

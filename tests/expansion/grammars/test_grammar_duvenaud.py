@@ -26,21 +26,9 @@ def test_instantiation(parsers_and_transformers):
 
     print(extender('linear'))
     assert extender('linear') == list(_IMPLEMENTED_KERNEL_EXPRESSIONS) + [
-        'linear + cosine',
-        '(linear) * cosine',
-        '(linear) * (cosine + constant)',
         'linear + linear',
         '(linear) * linear',
         '(linear) * (linear + constant)',
-        'linear + matern12',
-        '(linear) * matern12',
-        '(linear) * (matern12 + constant)',
-        'linear + matern32',
-        '(linear) * matern32',
-        '(linear) * (matern32 + constant)',
-        'linear + matern52',
-        '(linear) * matern52',
-        '(linear) * (matern52 + constant)',
         'linear + periodic',
         '(linear) * periodic',
         '(linear) * (periodic + constant)',
@@ -50,20 +38,20 @@ def test_instantiation(parsers_and_transformers):
         'linear + white',
         '(linear) * white',
         '(linear) * (white + constant)',
-        'linear + rationalquadratic',
-        '(linear) * rationalquadratic',
-        '(linear) * (rationalquadratic + constant)',
+        'linear + constant',
+        '(linear) * constant',
+        '(linear) * (constant + constant)',
         'linear',
     ]
 
 
-@pytest.mark.parametrize('k1', ['constant', 'cosine', 'linear', 'matern12', 'matern32', 'matern52', 'periodic', 'rbf', 'rationalquadratic', 'white'])
-@pytest.mark.parametrize('k2', ['constant', 'cosine', 'linear', 'matern12', 'matern32', 'matern52', 'periodic', 'rbf', 'rationalquadratic', 'white'])
-def test_parser(parser_transformer_duvenaud, k1, k2):
-    parser, _, _ = parser_transformer_duvenaud
+@pytest.mark.parametrize('k1', _IMPLEMENTED_KERNEL_EXPRESSIONS)
+@pytest.mark.parametrize('k2', _IMPLEMENTED_KERNEL_EXPRESSIONS)
+def test_parser(parser_transformer_extender_duvenaud, k1, k2):
+    parser, _, _ = parser_transformer_extender_duvenaud
 
-    type_k1 = 'BASE_KERNEL' if k1 != 'constant' else 'CONSTANT'
-    type_k2 = 'BASE_KERNEL' if k2 != 'constant' else 'CONSTANT'
+    type_k1 = 'BASE_KERNEL'
+    type_k2 = 'BASE_KERNEL'
 
     # Kernel.
     ast = parser.parse(k1)
@@ -81,9 +69,9 @@ def test_parser(parser_transformer_duvenaud, k1, k2):
     ast_lax_mul = parser.parse(f'({k1}) * ({k2} + constant)')
     ast_lax_mul_reverse = parser.parse(f'({k1}) * (constant + {k2})')
     assert str(ast_lax_mul) == (f"Tree(lax_mul, [Tree(kernel, [Token({type_k1}, '{k1}')]), "
-                                f"Tree(kernel, [Token({type_k2}, '{k2}')]), Tree(kernel, [Token(CONSTANT, 'constant')])])")
+                                f"Tree(kernel, [Token({type_k2}, '{k2}')])])")
     assert str(ast_lax_mul_reverse) == (f"Tree(lax_mul, [Tree(kernel, [Token({type_k1}, '{k1}')]), "
-                                        f"Tree(kernel, [Token(CONSTANT, 'constant')]), Tree(kernel, [Token({type_k2}, '{k2}')])])")
+                                        f"Tree(kernel, [Token({type_k2}, '{k2}')])])")
 
     with pytest.raises(UnexpectedInput):
         parser.parse(f'{k1} * {k2}')
@@ -106,13 +94,11 @@ def test_parser(parser_transformer_duvenaud, k1, k2):
     with pytest.raises(UnexpectedInput):
         parser.parse(f'cp({k2}, {k1}) * {k1}')
 
-    # TODO: Add `CW` and `CP` once available.
 
-
-@pytest.mark.parametrize('k1', ['constant', 'cosine', 'linear', 'matern12', 'matern32', 'matern52', 'periodic', 'rbf', 'rationalquadratic', 'white'])
-@pytest.mark.parametrize('k2', ['constant', 'cosine', 'linear', 'matern12', 'matern32', 'matern52', 'periodic', 'rbf', 'rationalquadratic', 'white'])
-def test_transformer(base_kernels, parser_transformer_duvenaud, k1, k2):
-    parser, transformer, _ = parser_transformer_duvenaud
+@pytest.mark.parametrize('k1', _IMPLEMENTED_KERNEL_EXPRESSIONS)
+@pytest.mark.parametrize('k2', _IMPLEMENTED_KERNEL_EXPRESSIONS)
+def test_transformer(base_kernels, parser_transformer_extender_duvenaud, k1, k2):
+    parser, transformer, _ = parser_transformer_extender_duvenaud
 
     if k1 != k2:
         res_kernel_set = {k1, k2}
@@ -155,31 +141,27 @@ def test_transformer(base_kernels, parser_transformer_duvenaud, k1, k2):
     else:
         assert set(kernel.children['sum'].children) == set(kernel_reverse.children['sum'].children) == {'constant_1', 'constant_2'}
 
-    # TODO: Change `CW` and `CP` once available.
-    # with pytest.raises(NotImplementedError):
-    #     transformer.transform('cp(constant, constant)')
+    with pytest.raises(NotImplementedError):
+        transformer.transform('cp(constant, constant)')
 
-    # with pytest.raises(NotImplementedError):
-    #     transformer.transform('cw(constant, constant)')
+    with pytest.raises(NotImplementedError):
+        transformer.transform('cw(constant, constant)')
 
 
-def test_complicated_compositions(parser_transformer_duvenaud):
-    parser, transformer, _ = parser_transformer_duvenaud
+def test_complicated_compositions(parser_transformer_extender_duvenaud):
+    parser, transformer, _ = parser_transformer_extender_duvenaud
 
     # Complicated task parser.
-    complicated_kernel = '(cp((linear) * rbf, cosine) + cw(matern12, constant + white + rationalquadratic) + matern32) * matern52'
-    complicated_res = ("Tree(mul, [Tree(add, [Tree(add, [Tree(cp, [Tree(mul, [Tree(kernel, [Token(BASE_KERNEL, 'linear')]), "
-                       "Tree(kernel, [Token(BASE_KERNEL, 'rbf')])]), Tree(kernel, [Token(BASE_KERNEL, 'cosine')])]), "
-                       "Tree(cw, [Tree(kernel, [Token(BASE_KERNEL, 'matern12')]), Tree(add, [Tree(add, [Tree(kernel, "
-                       "[Token(CONSTANT, 'constant')]), Tree(kernel, [Token(BASE_KERNEL, 'white')])]), Tree(kernel, "
-                       "[Token(BASE_KERNEL, 'rationalquadratic')])])])]), Tree(kernel, [Token(BASE_KERNEL, 'matern32')])]), "
-                       "Tree(kernel, [Token(BASE_KERNEL, 'matern52')])])")
+    complicated_kernel = '((linear) * rbf + linear + rbf + constant + white + rbf) * rbf'
+    complicated_res = ("Tree(mul, [Tree(add, [Tree(add, [Tree(add, [Tree(add, [Tree(add, [Tree(mul, [Tree(kernel, [Token(BASE_KERNEL, 'linear')]), "
+                       "Tree(kernel, [Token(BASE_KERNEL, 'rbf')])]), Tree(kernel, [Token(BASE_KERNEL, 'linear')])]), "
+                       "Tree(kernel, [Token(BASE_KERNEL, 'rbf')])]), Tree(kernel, [Token(BASE_KERNEL, 'constant')])]), Tree"
+                       "(kernel, [Token(BASE_KERNEL, 'white')])]), Tree(kernel, [Token(BASE_KERNEL, 'rbf')])]), Tree(kernel, [Token(BASE_KERNEL, 'rbf')])])")
     ast_complicated = parser.parse(complicated_kernel)
     assert str(ast_complicated) == complicated_res
 
     # Complicated task for transformer.
-    # TODO: Add `CP`, `CW` to this, once implemented.
-    complicated_kernel = '((linear + constant + white + matern12) * rationalquadratic) * cosine + periodic + rbf'
+    complicated_kernel = '((linear + constant + white + rbf) * linear) * periodic + periodic + rbf'
     ast_complicated = parser.parse(complicated_kernel)
     kernel = transformer.transform(ast_complicated)
 
@@ -187,39 +169,34 @@ def test_complicated_compositions(parser_transformer_duvenaud):
     assert set(kernel.children) == {'periodic', 'product', 'rbf'}
 
     k_lvl2 = kernel.children['product']
-    assert set(k_lvl2.children) == {'cosine', 'rationalquadratic', 'sum'}
+    assert set(k_lvl2.children) == {'periodic', 'linear', 'sum'}
 
     k_lvl3 = k_lvl2.children['sum']
-    assert set(k_lvl3.children) == {'constant', 'linear', 'white', 'matern12'}
+    assert set(k_lvl3.children) == {'constant', 'linear', 'white', 'rbf'}
 
 
-def test_duvenauds_tokens(parser_transformer_duvenaud):
+def test_duvenauds_tokens(parser_transformer_extender_duvenaud):
     """Test all tokens from `Automatic Model Construction with Gaussian Processes` by Duvenaud, described in Appendix B.
 
     Changepoints (B8) and Changewindows are currently omitted.
 
     """
-    parser, _, _ = parser_transformer_duvenaud
+    parser, _, _ = parser_transformer_extender_duvenaud
 
     tokens = parser.grammar.token_defs
     token_names = [t[0] for t in tokens]
     token_names.remove('WS')  # Helper that automatically ignores whitespaces, not originally part of grammar.
 
     assert 'BASE_KERNEL' in token_names
-    assert 'CONSTANT' in token_names
 
     base_kernel_string = str(tokens[0][1])
-    constant_string = str(tokens[1][1])
-
-    # B1, `constant`.
-    assert constant_string.count('constant') == 1
 
     for kernel_exp in _IMPLEMENTED_KERNEL_EXPRESSIONS:
         # Each kernel_exp must be defined exactly ONCE in basekernels.
-        assert base_kernel_string.count(kernel_exp) == (1 if kernel_exp != 'constant' else 0)
+        assert base_kernel_string.count(kernel_exp) == 1
 
 
-def test_duvenauds_rules(parser_transformer_duvenaud):
+def test_duvenauds_rules(parser_transformer_extender_duvenaud):
     """Test all rules from `Automatic Model Construction with Gaussian Processes` by Duvenaud, described in Appendix C.
 
     Rules C9, C10 are simplifications and allowed and implemented as part of the `extender`.
@@ -227,57 +204,45 @@ def test_duvenauds_rules(parser_transformer_duvenaud):
     `S` is called `kernel` here, base kenrels `B` are `{BASE_KERNEL, CONSTANT}`.
 
     """
-    parser, _, _ = parser_transformer_duvenaud
+    parser, _, _ = parser_transformer_extender_duvenaud
 
     # C1, `S + B`.
-    assert parser.parse('(constant) * rationalquadratic + matern12')
+    assert parser.parse('(constant) * rbf + linear')
 
     # C2, `S * B`. We force brackets every time we multiply in this grammars implementation.
     assert parser.parse('(white) * periodic')
-    assert parser.parse('((constant) * rationalquadratic) * matern12')
-    assert parser.parse('(cp(linear + linear, (linear) * rationalquadratic)) * linear')
+    assert parser.parse('((constant) * rbf) * linear')
+    assert parser.parse('((linear + linear + linear) * rbf) * linear')
 
     with pytest.raises(UnexpectedInput) as ex:
         parser.parse('white * periodic')
     assert "No token defined for: '*'" in str(ex)
 
     # C3, C8, Is `B` also `S`, `S` also `B`?
-    for kernel_exp in ['constant', 'rbf', 'rationalquadratic']:
+    for kernel_exp in ['constant', 'rbf', 'rbf']:
         assert parser.parse(kernel_exp).data == 'kernel'
 
-    # C4, `CP(S, S)`.
-    assert parser.parse('cp(linear, linear)')
-    assert parser.parse('cp((linear) * constant, linear)')
-    assert parser.parse('cp(linear, (linear) * rationalquadratic)')
-    assert parser.parse('cp(linear + linear, (linear) * rationalquadratic)')
-
-    # C5, C6, C7 `CW(S, S)`, `CW(S, C)`, `CW(C, S)`
-    assert parser.parse('cw(linear + linear, (linear) * rationalquadratic)')
-    assert parser.parse('cw(linear + linear, constant)')
-    assert parser.parse('cw(constant, (matern52) * linear)')
-
     # C11
-    assert parser.parse('(constant) * (matern32 + constant)')
-    assert parser.parse('((rationalquadratic) * linear) * (constant + matern12)')
-    assert parser.parse('((rationalquadratic) * linear) * (matern32 + constant)')
+    assert parser.parse('(constant) * (linear + constant)')
+    assert parser.parse('((rbf) * linear) * (constant + linear)')
+    assert parser.parse('((rbf) * linear) * (linear + constant)')
 
 
-def test_extender_bad_input(parser_transformer_duvenaud):
-    _, _, extender = parser_transformer_duvenaud
+def test_extender_bad_input(parser_transformer_extender_duvenaud):
+    _, _, extender = parser_transformer_extender_duvenaud
     for k_exp in ['', 'cp', 'cw', 'cw(,)', 'cp(,', ',', 'dsa', (1, 2, 3), '(constant)', '()', 'rq']:
         with pytest.raises(RuntimeError) as ex:
             extender(k_exp)
         assert 'RuntimeError: Called extender with an invalid kernel expression.' in str(ex)
 
 
-def test_extender_simple(parser_transformer_duvenaud):
-    parser, transformer, extender = parser_transformer_duvenaud
+def test_extender_simple(parser_transformer_extender_duvenaud):
+    parser, transformer, extender = parser_transformer_extender_duvenaud
 
     # Simple expressions.
     for kernel_expression in _IMPLEMENTED_KERNEL_EXPRESSIONS:
         res_should_be = list(_IMPLEMENTED_KERNEL_EXPRESSIONS)  # C3, C8
         c1_c2_c11 = []
-        # TODO: Add cp, cw once available.
         for kernel_exp in _IMPLEMENTED_KERNEL_EXPRESSIONS:
             c1_c2_c11.extend([
                 f'{kernel_expression} + {kernel_exp}',  # C1
@@ -293,14 +258,13 @@ def test_extender_simple(parser_transformer_duvenaud):
             parser.parse(kernel_expression)
 
 
-def test_extender_complex(parser_transformer_duvenaud):
-    parser, transformer, extender = parser_transformer_duvenaud
+def test_extender_complex(parser_transformer_extender_duvenaud):
+    parser, transformer, extender = parser_transformer_extender_duvenaud
 
-    # 1) More complex expressions, works because no `+` or `*` in a `cp`/`cw`/`()`.
-    for kernel_expression in ['white + constant', '(rbf) * linear', 'cp(linear, white)', '(cp(cw(rbf, rbf), matern52)) * constant']:
+    # 1) More complex expressions, works because no `+` or `*` in a `()`.
+    for kernel_expression in ['white + constant', '(rbf) * linear', '(linear) * white']:
         res_should_be = list(_IMPLEMENTED_KERNEL_EXPRESSIONS)  # C3, C8
         c1_c2_c11 = []
-        # TODO: Add cp, cw once available.
         for kernel_exp in _IMPLEMENTED_KERNEL_EXPRESSIONS:
             c1_c2_c11.extend([
                 f'{kernel_expression} + {kernel_exp}',  # C1
@@ -333,8 +297,8 @@ def test_extender_complex(parser_transformer_duvenaud):
         transformer.transform(ast)
 
 
-@pytest.mark.parametrize('k1', ['constant', 'cosine', 'linear', 'matern12', 'matern32', 'matern52', 'periodic', 'rbf', 'rationalquadratic', 'white'])
-@pytest.mark.parametrize('k2', ['constant', 'cosine', 'linear', 'matern12', 'matern32', 'matern52', 'periodic', 'rbf', 'rationalquadratic', 'white'])
+@pytest.mark.parametrize('k1', _IMPLEMENTED_KERNEL_EXPRESSIONS)
+@pytest.mark.parametrize('k2', _IMPLEMENTED_KERNEL_EXPRESSIONS)
 def test_extender_subexpressions(k1, k2):
     assert _extender_subexpressions(k1) == [k1]
     assert _extender_subexpressions(f'{k1} + {k2}') == [k1, k2]
