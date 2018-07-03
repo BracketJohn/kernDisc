@@ -1,25 +1,31 @@
 """Module for kerndisc utility functions."""
-from typing import Dict, List
+from typing import Any, Dict, List
 
 
-def n_best_scored_kernel_expressions(kernel_expressions: Dict[str, Dict[str, int]], n: int=1) -> List[str]:
-    """Get top `n` kernel expressions by score.
+def n_best_scored_kernels(scored_kernels: Dict[str, Dict[str, Any]], n: int=1) -> List[str]:
+    """Get top `n` kernels by score.
+
+    Top `n` kernels are the `n` kernels that have the LOWEST score,
+    as we force minimization metrics here.
 
     Parameters
     ----------
-    kernel_expressions: Dict[str, Dict[str, int]]
-        Scored kernel expressions structured like:
+    scored_kernels: Dict[str, Dict[str, int]]
+        Scored kernels structured like:
         ```
         {
-            k_exp_1: {
+            kernel_expression_1: {
                 'score': score_1,
+                ...
             },
             ...,
-            k_exp_n: {
+            kernel_expression_n: {
                 'score': score_n,
+                ...
             },
         }
         ```
+        The full format can be seen in `kerndisc._discover`.
 
     n: int
         Top `n` kernels to be returned.
@@ -27,8 +33,7 @@ def n_best_scored_kernel_expressions(kernel_expressions: Dict[str, Dict[str, int
     Returns
     -------
     n_best_scored: List[str]
-         `n` best performing kernel expressions in descending order.
+         `n` best performing kernels in descending order.
 
     """
-    # Get last two elements of sorted (sorts ascending), return in reverse order, so that `n_best_scored[0]` is best expression.
-    return sorted((k_exp for k_exp in kernel_expressions), key=lambda kernel_expression: kernel_expressions[kernel_expression]['score'])[:n]
+    return sorted(scored_kernels, key=lambda kernel: scored_kernels[kernel]['score'])[:n]

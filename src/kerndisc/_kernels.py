@@ -11,8 +11,11 @@ from gpflow.kernels import (ArcCosine,
                             Matern32,
                             Matern52,
                             Periodic,
+                            Polynomial,
+                            Product,
                             RationalQuadratic,
                             RBF,
+                            Sum,
                             White)
 
 BASE_KERNELS: Dict[str, gpflow.kernels.Kernel] = {
@@ -25,7 +28,13 @@ BASE_KERNELS: Dict[str, gpflow.kernels.Kernel] = {
     'matern32': Matern32,
     'matern52': Matern52,
     'periodic': Periodic,
-    'rbf': RBF,
+    'polynomial': Polynomial,
     'rationalquadratic': RationalQuadratic,
+    'rbf': RBF,
     'white': White,
+}
+
+COMBINATION_KERNELS: Dict[str, gpflow.kernels.Kernel] = {
+    'product': Product,
+    'sum': Sum,
 }

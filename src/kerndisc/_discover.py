@@ -1,16 +1,18 @@
 """Module to run kernel discovery."""
 import logging
 
+import gpflow
 import numpy as np
 
 from ._preprocessing import preprocess
-from ._util import n_best_scored_kernel_expressions
+from ._util import n_best_scored_kernels
+from .description import ast_to_text, kernel_to_ast
 from .evaluation import evaluate
-from .expansion import expand_kernel_expressions
+from .expansion import expand_kernels
 
 
 _LOGGER = logging.getLogger(__package__)
-_START_KERNEL = 'white'
+_START_AST = kernel_to_ast(gpflow.kernels.White(1))
 
 
 def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, kernels_per_depth: int=1) -> str:
@@ -38,39 +40,34 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, kernels_per_dep
 
     """
     x, y = preprocess(x, y)
-    scored_kernel_expressions = {
-        _START_KERNEL: {
+    scored_kernels = {
+        ast_to_text(_START_AST): {
+            'ast': _START_AST,
             'score': np.Inf,
             'search_depth': 0,
         },
     }
 
     for depth in range(search_depth):
-        best_previous_exps = n_best_scored_kernel_expressions(scored_kernel_expressions, n=kernels_per_depth)
+        best_previous_kernels = n_best_scored_kernels(scored_kernels, n=kernels_per_depth)
 
         _LOGGER.info(f'Depth `{depth}`: Kernel discovery with `{kernels_per_depth}` best performing kernels '
-                     f'of last iteration: `{best_previous_exps}`, '
-                     f'with scores: `{[scored_kernel_expressions[k_exp]["score"] for k_exp in best_previous_exps]}`.')
+                     f'of last iteration: `{best_previous_kernels}`, '
+                     f'with scores: `{[scored_kernels[kernel_name]["score"] for kernel_name in best_previous_kernels]}`.')
 
-        expanded_exps = expand_kernel_expressions(best_previous_exps)
+        new_asts = expand_kernels([scored_kernels[kernel_name]['ast'] for kernel_name in best_previous_kernels])
 
         _LOGGER.info(f'Depth `{depth}`: Deduplicating and constructing search space.')
 
-        unscored_exps = {
-            k_exp: {
-                'score': np.Inf,
-                'search_depth': depth,
-            } for k_exp in expanded_exps if k_exp not in scored_kernel_expressions
-        }
+        unscored_asts = [ast for ast in new_asts if ast_to_text(ast) not in scored_kernels]
 
         _LOGGER.info(f'Depth `{depth}`: Scoring unscored kernels.')
 
-        if unscored_exps:
-            for k_exp, score in evaluate(x, y, list(unscored_exps)):
-                unscored_exps[k_exp]['score'] = score
+        for ast, score in evaluate(x, y, unscored_asts):
+            scored_kernels[ast_to_text(ast)] = {
+                'ast': ast,
+                'depth': depth,
+                'score': score,
+            }
 
-        _LOGGER.info(f'Depth `{depth}`: Adding now scored kernels to already scored kernels.')
-
-        scored_kernel_expressions.update(unscored_exps)
-
-    return n_best_scored_kernel_expressions(scored_kernel_expressions, n=1)
+    return n_best_scored_kernels(scored_kernels, n=1)

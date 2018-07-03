@@ -8,7 +8,7 @@ gpflow = "*"
 numpy = "*"
 lark-parser = "*"
 tensorflow = "*"
-pathos = "*"
+anytree = "*"
 
 [dev-packages]
 pytest = "*"
@@ -26,7 +26,6 @@ pytest-mypy = "==0.3.0"
 "pep8-naming" = "*"
 mypy = "==0.560"
 pytest-xdist = "*"
-pydot = "*"
 
 [requires]
 python_version = "3.6"

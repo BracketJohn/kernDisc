@@ -1,44 +1,19 @@
-import os
 from typing import Callable
 
-from lark import Lark, Transformer
+import gpflow
 
-from kerndisc.expansion.grammars import (_DEFAULT_GRAMMAR,  # noqa: I202, I100
-                                         get_builder,
-                                         get_current_grammar,
-                                         get_extender,
-                                         get_kernels,
-                                         get_parser,
-                                         get_transformer)
+from kerndisc.expansion.grammars import expand_kernel  # noqa: I202, I100
 
 
-def test_get_current_grammar():
-    assert os.environ['GRAMMAR'] == get_current_grammar()
+def test_expand_kernel(kernel_to_tree, tree_to_str):
+    r"""Test whether `expand_kernel` is a `callable` and idempotent.
 
-    os.environ['GRAMMAR'] = 'non_existing_grammar'
+    The first part wasn't true in the past.
 
-    # Shouldn't change as there is an `lru_cache`.
-    assert get_current_grammar() == _DEFAULT_GRAMMAR
+    """
+    assert isinstance(expand_kernel, Callable)
 
+    expanded_linear_ast_repr_one = [tree_to_str(kernel_to_tree(k)) for k in expand_kernel(gpflow.kernels.Linear(1))]
+    expanded_linear_ast_repr_two = [tree_to_str(kernel_to_tree(k)) for k in expand_kernel(gpflow.kernels.Linear(1))]
 
-def test_get_parser():
-    assert isinstance(get_parser(), Lark)
-
-
-def test_get_transformer():
-    assert isinstance(get_transformer(), Transformer)
-
-
-def test_get_extender():
-    assert isinstance(get_extender(), Callable)
-
-
-def test_get_kernels(base_kernels):
-    assert get_kernels() == base_kernels
-
-
-def test_get_builder(parser_transformer_extender_duvenaud):
-    build = get_builder()
-    parser, transformer, _ = parser_transformer_extender_duvenaud
-
-    assert build('linear').name == transformer.transform(parser.parse('linear')).name
+    assert set(expanded_linear_ast_repr_one) == set(expanded_linear_ast_repr_two)

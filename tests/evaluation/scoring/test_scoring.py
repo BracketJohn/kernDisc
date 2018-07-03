@@ -5,16 +5,11 @@ import numpy as np
 
 from kerndisc.evaluation.scoring import (_METRICS,  # noqa: I202, I100
                                          _STANDARD_METRIC,
-                                         get_current_metric,
                                          score_model)
 
 
 def test_standard_metrics(available_metrics):
     assert set(_METRICS) == available_metrics
-
-
-def test_get_current_metric():
-    assert get_current_metric() == _STANDARD_METRIC
 
 
 def test_score_model():

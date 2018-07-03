@@ -1,35 +1,45 @@
-"""Module for kernel expression expansion/alteration."""
+"""Module for kernel expansion."""
 import logging
 from typing import List
 
-from .grammars import get_current_grammar, get_extender
+from anytree import Node
+import gpflow
 
+from .grammars import expand_kernel, SELECTED_GRAMMAR_NAME
+from ..description import ast_to_kernel, kernel_to_ast
 
 _LOGGER = logging.getLogger(__package__)
 
 
-def expand(kernel_expressions: List[str]) -> List[str]:
-    """Expand each kernel expression of a list into all its possible expansions allowed by grammar.
+@gpflow.defer_build()
+def expand_kernels(asts: List[Node]) -> List[Node]:
+    """Expand each kernel of a list into all its possible expansions allowed by grammar.
+
+    This method transparently abstracts from ASTs to gpflow kernels. This way a new grammar can
+    be implemented by using addition and multiplication, without having to hassle with tree
+    operations.
 
     Kernels are expanded by the grammar selected via the environment variable `GRAMMAR`. Default grammar is `duvenaud`,
     as defined by Duvenaud et al., see `grammars` package for more info.
 
+    Kernels expanded by this method are not built at runtime, to speed up expansion.
+
     Parameters
     ----------
-    kernel_expressions: List[str]
-        Kernel expressions to be expanded.
+    kernels: List[Node]
+        Kernel ASTs to be expanded.
 
     Returns
     -------
-    expanded_expressions: List[str]
-        All possible alterations of kernels expressions initially passed to method, according to rules of kernel grammar.
+    expanded_kernels: List[Node]
+        All possible alterations of kernel ASTs initially passed to method, according to rules of kernel grammar.
 
     """
-    _LOGGER.debug(f'Expanding kernel expressions:\n`{kernel_expressions}`,\nusing grammar `{get_current_grammar()}`.')
+    _LOGGER.debug(f'Expanding ASTs:\n`{asts}`,\nusing grammar `{SELECTED_GRAMMAR_NAME}`.')
 
-    extender = get_extender()
-    expanded_expressions = []
-    for k_exp in kernel_expressions:
-        expanded_expressions.extend(extender(k_exp))
+    expanded_kernels = []
+    for ast in asts:
+        kernel = ast_to_kernel(ast)
+        expanded_kernels.extend(expand_kernel(kernel))
 
-    return expanded_expressions
+    return [kernel_to_ast(kernel) for kernel in expanded_kernels]

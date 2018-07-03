@@ -5,10 +5,10 @@ This package provides the modules necessary to execute a univariate structured k
 Example
 -------
 To execute kernel structure discovery run:
-
-    $ from kerndisc import discover
-    $ k = discover(x, y)
-
+```
+    > from kerndisc import discover
+    > k = discover(x, y)
+```
 This will then execute a kernel discovery search and return the best performing kernel.
 
 TODO: Finish this once `kerndisc` is done.

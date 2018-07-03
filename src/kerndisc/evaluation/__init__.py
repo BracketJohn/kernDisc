@@ -1,23 +1,21 @@
-"""Package to evaluate performance of kernel expressions.
+r"""Package to evaluate performance of kernels.
 
 This package provides:
-    * The `evaluate` method, which builds kernels from kernel expressions, then trains and scores them.
+    * The `evaluate` method, which builds kernels from ASTs, then trains and scores them.
 
 Example
 -------
-To evaluate kernel expressions run:
+To evaluate ASTs run:
 ```
+    > from kerndisc.description import pretty_ast
     > from kerndisc.evaluation import evaluate
-    > for kernel_expression, score in evaluate(X, Y, kernel_expressions):
-    >     print(f'Kernel `{kernel_expressions}` has score `{score}`.')
+    > for ast, score in evaluate(X, Y, asts):
+    >     print(f'Ast\n`{pretty_ast(ast)}`\nhas scored `{score:.2f}`.')
 ```
-
-Evaluation uses multiple cores if applicable. How many cores it used can be set via the environment variable `CORES`.
-Default is `1` core. `CORES=4` would lead to `4` cores being used.
 
 The models/kernels performance is then scored by the selected metric, which can be set via the environment
-variable `METRIC`. See the `scoring` package for more on this.
-Default metric is an altered version of the bayesian information criterion.
+variable `METRIC`. See the `scoring` package for more on this. Default metric is an altered version of
+the bayesian information criterion.
 
 """
 

@@ -1,3 +1,4 @@
+"""Module for scoring utility functions."""
 import gpflow
 
 

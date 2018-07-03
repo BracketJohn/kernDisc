@@ -1,9 +1,9 @@
 from random import randint
 
-from kerndisc._util import n_best_scored_kernel_expressions
+from kerndisc._util import n_best_scored_kernels
 
 
-def test_n_best_scored_kernel_expressions():
+def test_n_best_scored_kernels():
     some_scores = {
         randint(0, 100): {
             'score': randint(-100, 100),
@@ -17,11 +17,11 @@ def test_n_best_scored_kernel_expressions():
         'score': -999,
     }
 
-    assert n_best_scored_kernel_expressions(some_scores, n=2) == ['best_performing', 'second_best']
+    assert n_best_scored_kernels(some_scores, n=2) == ['best_performing', 'second_best']
 
     more_scores = {
         score: {
             'score': score,
         } for score in range(200)}
 
-    assert n_best_scored_kernel_expressions(more_scores, n=len(more_scores)) == list(range(200))
+    assert n_best_scored_kernels(more_scores, n=len(more_scores)) == list(range(200))

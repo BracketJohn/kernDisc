@@ -1,32 +1,32 @@
+"""Module to evaluate performance of a kernel expression."""
 import logging
 import os
 from typing import Callable, Generator, List, Tuple
 
+from anytree import Node
 import gpflow
 import numpy as np
-from tensorflow import errors as tf_errors
+import tensorflow as tf
 
 from ._util import add_jitter_to_model
 from .scoring import score_model
-from ..expansion.grammars import get_builder
+from ..description import ast_to_kernel, pretty_ast
 
 
 _CORES = int(os.environ.get('CORES', 1))
 _LOGGER = logging.getLogger(__package__)
 
 
-def evaluate(x: np.ndarray, y: np.ndarray, kernel_expressions: List[str], add_jitter: bool=True) -> Generator[Tuple[str, float], None, None]:
-    """Transform kernel expressions into actual kernels and score them on data.
+def evaluate(x: np.ndarray, y: np.ndarray, asts: List[Node],
+             add_jitter: bool=True) -> Generator[Tuple[Node, float], None, None]:
+    """Score kernels, represented as ASTs, on data.
 
-    Get the current grammars parser and transformer, also create an optimizer, then:
-        * Build AST from kernel expression with parser,
-        * transform AST into a kernel,
-        * build a regression model with said kernel, condition it on `x` and `y`,
-        * score the model by the currently selected scoring method.
+    It does so by:
+        * Building a regression model from the AST of said kernel, conditioning it on `x` and `y`,
+        * scoring the model by the currently selected scoring method.
 
-    After building it the `evaluator` which handles this process can add randomness (`add_jitter`)
-    to each models parameters. This instabillity leads to empirically observed performance improvments,
-    as described in the Automated Statistician by Duvenaud et al. Randomness is drawn from a normal distribution.
+    This process can add randomness (`add_jitter`) to each models parameters. This instabillity leads
+    to empirically observed performance improvments, as described in the Automated Statistician by Duvenaud et al.
 
     Parameters
     ----------
@@ -36,32 +36,34 @@ def evaluate(x: np.ndarray, y: np.ndarray, kernel_expressions: List[str], add_ji
     y: np.ndarray
         Observed function values `y_1, ..., y_n`, outputs of function for inputs `x_1, ..., x_n`.
 
-    kernel_expressions: List[str]
-        Kernel expressions to be transformed into kernels and score on `x`, `y`.
+    kernels: List[Node]
+        Kernel ASTs to be transformed into kernels and scored on `x`, `y`.
 
     add_jitter: bool
         Whether to add jitter (small randomness) to each models parameters after building it.
 
     Returns
     -------
-    score_generator: Generator[Tuple[str, float], None, None]
-        Yield `kernel_expression, score` for each kernel expression initially passed to `evaluate`.
+    score_generator: Generator[Tuple[Node, float], None, None]
+        Yield `ast, score` for each kernel initially passed to `evaluate`.
 
     """
     evaluate = _make_evaluator(x, y, add_jitter)
 
-    for optimized, kernel_expression in enumerate(kernel_expressions):
-        yield kernel_expression, evaluate(kernel_expression)
-        _LOGGER.info(f'`{optimized + 1}/{len(kernel_expressions)}`: Done with scoring of `{kernel_expression}`.')
+    for optimized, ast in enumerate(asts):
+        score = evaluate(ast)
+        yield ast, score
+        _LOGGER.info(f'`({optimized + 1}/{len(asts)})` Score was `{score:.3f}` for:\n{pretty_ast(ast)}')
 
 
 def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
-    """Make evaluator that builds, optimizes and scores a single kernel expression.
+    """Make evaluator that builds, optimizes and scores a single kernel.
 
     Wrapper that makes `x`, `y` available to `_evaluator`, eliminating the need to
-    initialize them for every kernel expression that needs to be built.
+    initialize them for every kernel that needs to be built.
 
-    Resulting callable (`_evaluator`) can then be distributed onto different CPU cores to speed up evaluation.
+    Resulting callable (`_evaluator`) can be distributed onto different CPU cores to speed up evaluation,
+    if desired.
 
     Parameters
     ----------
@@ -77,38 +79,46 @@ def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
     Returns
     -------
     _evaluator: Callable
-        Evaluates a kernel expression passed to it.
+        Evaluates a kernel passed to it.
 
     """
-    build = get_builder()
     optimizer = gpflow.train.ScipyOptimizer()
 
-    def _evaluate(kernel_expression: str) -> float:
-        """Build, optimize and score a single kernel expression.
+    def _evaluate(ast: Node) -> float:
+        """Build, optimize and score a single kernel.
 
         If Cholesky decomposition for optimization is not successfull,
         `np.Inf` is returned and any exception occuring is surpressed.
 
+        A new tensorflow `graph` is instantiated every time, as the
+        tensorflow graph isn't reset automatically by optimization.
+        This results in `tf.all_variables` growing over time, slowing
+        down performance immensely.
+
         Parameters
         ----------
-        kernel_expression: str
-            Kernel expression to be evaluated.
+        ast: Node
+            AST that represents a kernel to be evaluated. This can be
+            any part of the tree, but should usually be its root.
 
         Returns
         -------
         score: float
-            Score of kernel expression, calculated using current metric.
+            Score of kernel, calculated using the current metric.
 
         """
-        model = gpflow.models.GPR(x, y, kern=build(kernel_expression))
-        if add_jitter:
-            add_jitter_to_model(model)
+        with tf.Session(graph=tf.Graph()):
+            model = gpflow.models.GPR(x, y, kern=ast_to_kernel(ast))
 
-        try:
-            optimizer.minimize(model)
-        except tf_errors.InvalidArgumentError:
-            _LOGGER.debug(f'Cholesky decomposition failed for: {kernel_expression}.')
-            return np.Inf
-        return score_model(model)
+            if add_jitter:
+                add_jitter_to_model(model)
+
+            try:
+                optimizer.minimize(model)
+            except tf.errors.InvalidArgumentError:
+                _LOGGER.debug(f'Cholesky decomposition failed for: {ast}.')
+                return np.Inf
+
+            return score_model(model)
 
     return _evaluate
