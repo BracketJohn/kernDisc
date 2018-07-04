@@ -27,7 +27,7 @@ def test_kernel_to_ast(compare_asts):
     Node(gpflow.kernels.White, parent=prod)
     Node(gpflow.kernels.Linear, parent=prod)
 
-    compare_asts(ast_kernel, ast_manual)
+    assert compare_asts(ast_kernel, ast_manual)
 
 
 def test_ast_to_kernel(available_kernels, available_combination_kernels, kernel_to_tree, compare_asts):
@@ -52,9 +52,9 @@ def test_ast_to_kernel(available_kernels, available_combination_kernels, kernel_
 
     for ast, kernel in zip(asts, kernels):
         kernel_ast = kernel_to_tree(kernel)
-        compare_asts(ast, kernel_ast)
+        assert compare_asts(ast, kernel_ast)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         ast_to_kernel(Node('not_a_kernel'))
 
 
@@ -64,7 +64,7 @@ def test_interoperability(compare_asts):
     kernel_to_ast_one = kernel_to_ast(kernel)
     kernel_to_ast_two = kernel_to_ast(ast_to_kernel(kernel_to_ast(kernel)))
 
-    compare_asts(kernel_to_ast_one, kernel_to_ast_two)
+    assert compare_asts(kernel_to_ast_one, kernel_to_ast_two)
 
 
 def test_ast_to_text():
@@ -87,5 +87,5 @@ def test_ast_to_text():
 
     assert ast_str == '(rbf + white * linear) * polynomial'
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         ast_to_text(Node('not_a_kernel'))

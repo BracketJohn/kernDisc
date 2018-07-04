@@ -92,4 +92,5 @@ def compare_asts():
     def _comp_asts(ast_one, ast_two):
         for node_ast, node_kernel_ast in zip(LevelOrderIter(ast_one), LevelOrderIter(ast_two)):
             assert node_ast.name == node_kernel_ast.name
+        return True
     return _comp_asts
