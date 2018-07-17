@@ -4,10 +4,10 @@ from anytree import Node
 import gpflow
 import pytest
 
-from kerndisc.description import ast_to_kernel, ast_to_text, kernel_to_ast  # noqa: I202, I100
+from kerndisc.description._transform import ast_to_kernel, ast_to_text, kernel_to_ast  # noqa: I202, I100
 
 
-def test_kernel_to_ast(compare_asts):
+def test_kernel_to_ast(are_asts_equal):
     kernel = (gpflow.kernels.RBF(1) + gpflow.kernels.White(1) * gpflow.kernels.Linear(1)) * gpflow.kernels.Polynomial(1)
 
     ast_kernel = kernel_to_ast(kernel)
@@ -27,10 +27,10 @@ def test_kernel_to_ast(compare_asts):
     Node(gpflow.kernels.White, parent=prod)
     Node(gpflow.kernels.Linear, parent=prod)
 
-    assert compare_asts(ast_kernel, ast_manual)
+    assert are_asts_equal(ast_kernel, ast_manual)
 
 
-def test_ast_to_kernel(available_kernels, available_combination_kernels, kernel_to_tree, compare_asts):
+def test_ast_to_kernel(available_kernels, available_combination_kernels, kernel_to_tree, are_asts_equal):
     available_kerns = list(available_kernels.values())
     root = Node(available_combination_kernels['sum'])
 
@@ -49,22 +49,27 @@ def test_ast_to_kernel(available_kernels, available_combination_kernels, kernel_
 
     asts = [root, prod, sum_]
     kernels = [ast_to_kernel(ast) for ast in asts]
+    kernels_built = [ast_to_kernel(ast, build=True) for ast in asts]
 
     for ast, kernel in zip(asts, kernels):
         kernel_ast = kernel_to_tree(kernel)
-        assert compare_asts(ast, kernel_ast)
+        assert are_asts_equal(ast, kernel_ast)
+
+    for ast, kernel in zip(asts, kernels_built):
+        kernel_ast = kernel_to_tree(kernel)
+        assert are_asts_equal(ast, kernel_ast)
 
     with pytest.raises(TypeError):
         ast_to_kernel(Node('not_a_kernel'))
 
 
-def test_interoperability(compare_asts):
+def test_interoperability(are_asts_equal):
     kernel = (gpflow.kernels.RBF(1) + gpflow.kernels.White(1) * gpflow.kernels.Linear(1)) * gpflow.kernels.Polynomial(1)
 
     kernel_to_ast_one = kernel_to_ast(kernel)
     kernel_to_ast_two = kernel_to_ast(ast_to_kernel(kernel_to_ast(kernel)))
 
-    assert compare_asts(kernel_to_ast_one, kernel_to_ast_two)
+    assert are_asts_equal(kernel_to_ast_one, kernel_to_ast_two)
 
 
 def test_ast_to_text():
@@ -85,7 +90,8 @@ def test_ast_to_text():
 
     ast_str = ast_to_text(ast_manual)
 
-    assert ast_str == '(rbf + white * linear) * polynomial'
+    assert ast_str == '(linear * white + rbf) * polynomial'
 
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError) as ex:
         ast_to_text(Node('not_a_kernel'))
+    assert str(ex.value) == "'str' object has no attribute '__name__'"

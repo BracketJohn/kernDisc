@@ -1,7 +1,7 @@
 """Module to evaluate performance of a kernel expression."""
 import logging
 import os
-from typing import Callable, Generator, List, Tuple
+from typing import Callable, Dict, Generator, List, Tuple
 
 from anytree import Node
 import gpflow
@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 
 from ._util import add_jitter_to_model
-from .scoring import score_model
+from .scoring import score_model, SELECTED_METRIC_NAME
 from ..description import ast_to_kernel, pretty_ast
 
 
@@ -17,8 +17,8 @@ _CORES = int(os.environ.get('CORES', 1))
 _LOGGER = logging.getLogger(__package__)
 
 
-def evaluate(x: np.ndarray, y: np.ndarray, asts: List[Node],
-             add_jitter: bool=True) -> Generator[Tuple[Node, float], None, None]:
+def evaluate_asts(x: np.ndarray, y: np.ndarray, asts: List[Node],
+                  add_jitter: bool=True) -> Generator[Tuple[Node, Dict[str, np.ndarray], float], None, None]:
     """Score kernels, represented as ASTs, on data.
 
     It does so by:
@@ -44,16 +44,16 @@ def evaluate(x: np.ndarray, y: np.ndarray, asts: List[Node],
 
     Returns
     -------
-    score_generator: Generator[Tuple[Node, float], None, None]
-        Yield `ast, score` for each kernel initially passed to `evaluate`.
+    score_generator: Generator[Tuple[Node, Dict[str, np.ndarray], float], None, None]
+        Yield `ast, model_params, score` for each AST initially passed to `evaluate_asts`.
 
     """
-    evaluate = _make_evaluator(x, y, add_jitter)
+    evaluate_ast = _make_evaluator(x, y, add_jitter)
 
-    for optimized, ast in enumerate(asts):
-        score = evaluate(ast)
-        yield ast, score
-        _LOGGER.info(f'`({optimized + 1}/{len(asts)})` Score was `{score:.3f}` for:\n{pretty_ast(ast)}')
+    for n_optimized, ast in enumerate(asts):
+        optimized_model, score = evaluate_ast(ast)
+        yield ast, optimized_model.read_values(), score
+        _LOGGER.info(f'`({n_optimized + 1}/{len(asts)})` `{SELECTED_METRIC_NAME}` score was `{score:.3f}` for:\n{pretty_ast(ast)}')
 
 
 def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
@@ -79,12 +79,12 @@ def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
     Returns
     -------
     _evaluator: Callable
-        Evaluates a kernel passed to it.
+        Evaluates a kernel AST passed to it.
 
     """
     optimizer = gpflow.train.ScipyOptimizer()
 
-    def _evaluate(ast: Node) -> float:
+    def _evaluate_ast(ast: Node) -> float:
         """Build, optimize and score a single kernel.
 
         If Cholesky decomposition for optimization is not successfull,
@@ -103,8 +103,9 @@ def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
 
         Returns
         -------
-        score: float
-            Score of kernel, calculated using the current metric.
+        model, score: Tuple[gpflow.models.gpr.GPR, float]
+            Optimized model constructed from `ast` and its score, calculated
+            using the current metric.
 
         """
         with tf.Session(graph=tf.Graph()):
@@ -117,8 +118,8 @@ def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
                 optimizer.minimize(model)
             except tf.errors.InvalidArgumentError:
                 _LOGGER.debug(f'Cholesky decomposition failed for: {ast}.')
-                return np.Inf
+                return model, np.Inf
 
-            return score_model(model)
+            return model, score_model(model)
 
-    return _evaluate
+    return _evaluate_ast

@@ -17,5 +17,4 @@ def get_prod_count_kernel(kernel: gpflow.kernels.Kernel) -> int:
         return 1 + sum(get_prod_count_kernel(k) for k in kernel.children.values())
     if isinstance(kernel, gpflow.kernels.Sum):
         return sum(get_prod_count_kernel(k) for k in kernel.children.values())
-    # TODO: Add recursion for CPs and CWs.
     return 0

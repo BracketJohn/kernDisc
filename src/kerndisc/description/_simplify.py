@@ -28,7 +28,8 @@ def simplify(node: Node) -> Node:
         Simplified AST of a kernel.
 
     """
-    return replace_white_products(merge_rbfs(distribute(node)))
+    to_simplify = deepcopy(node)
+    return replace_white_products(merge_rbfs(distribute(to_simplify)))
 
 
 def distribute(node: Node) -> Node:
@@ -81,7 +82,12 @@ def _distribute(node: Node) -> None:
             for child in sum_to_distr.children:
                 new_prod = Node(gpflow.kernels.Product, full_name='Product', parent=node)
 
-                new_kids = [deepcopy(child)] + [deepcopy(child) for child in children_to_distribute_to]
+                new_kids = [deepcopy(child) for child in children_to_distribute_to]
+                if child.name is gpflow.kernels.Product:
+                    # Child to distribute to is a `Product`, doing nothing would lead to two nested products.
+                    new_kids.extend([deepcopy(child) for child in child.children])
+                else:
+                    new_kids += [child]
                 for kid in new_kids:
                     kid.parent = new_prod
 
@@ -198,10 +204,7 @@ def _replace_white_products(node: Node) -> None:
             if len(new_kids) == 1:
                 if node.is_root:
                     node.name = new_kids[0].name
-                    try:
-                        node.full_name = new_kids[0].full_name
-                    except AttributeError:
-                        pass
+                    node.full_name = new_kids[0].full_name
                 else:
                     new_kids[0].parent = node.parent
                     node.parent = None

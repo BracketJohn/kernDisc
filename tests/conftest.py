@@ -15,6 +15,7 @@ from gpflow.kernels import (ArcCosine,
                             RBF,
                             Sum,
                             White)
+import numpy as np
 import pytest
 
 
@@ -25,6 +26,13 @@ def available_metrics():
         'bayesian_information_criterion',
         'bayesian_information_criterion_duvenaud',
     }
+
+
+@pytest.fixture(scope='session')
+def standard_metric():
+    def _calc_standard_metric(model):
+        return 2 * -model.compute_log_likelihood() + len(list(model.parameters)) * np.log(model.X.shape[0])
+    return _calc_standard_metric
 
 
 @pytest.fixture(scope='session')
@@ -88,9 +96,23 @@ def tree_to_str(available_kernels, available_combination_kernels):
 
 
 @pytest.fixture(scope='session')
-def compare_asts():
+def tree_to_kernel():
+    def _tree_to_kernel(node: Node):
+        if node.is_leaf:
+            return node.name(1)
+        return node.name([_tree_to_kernel(child) for child in node.children])
+    return _tree_to_kernel
+
+
+@pytest.fixture(scope='session')
+def are_asts_equal():
     def _comp_asts(ast_one, ast_two):
-        for node_ast, node_kernel_ast in zip(LevelOrderIter(ast_one), LevelOrderIter(ast_two)):
-            assert node_ast.name == node_kernel_ast.name
+        lvl_order_ast_one = list(LevelOrderIter(ast_one))
+        lvl_order_ast_two = list(LevelOrderIter(ast_two))
+        if len(lvl_order_ast_one) != len(lvl_order_ast_two):
+            return False
+        for node_ast, node_kernel_ast in zip(lvl_order_ast_one, lvl_order_ast_one):
+            if node_ast.name != node_kernel_ast.name:
+                return False
         return True
     return _comp_asts

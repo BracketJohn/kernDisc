@@ -1,6 +1,6 @@
 from anytree import Node
 
-from kerndisc.description import pretty_ast  # noqa: I202, I100
+from kerndisc.description._util import pretty_ast  # noqa: I202, I100
 
 
 def test_pretty_ast():

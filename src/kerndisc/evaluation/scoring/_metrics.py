@@ -94,5 +94,4 @@ def bayesian_information_criterion_duvenaud(model: gpflow.models.Model) -> float
     effective_theta_cnt = len(list(model.parameters)) - 1  # Minus 1 for variance of likelihood.
 
     effective_theta_cnt -= get_prod_count_kernel(model.kern) - 1
-    # TODO: Add param addition for CPs and CWs (if their params aren't automatically recognized).
     return 2 * negative_log_likelihood(model) + effective_theta_cnt * np.log(model.X.shape[0])

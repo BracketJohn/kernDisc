@@ -1,17 +1,18 @@
+"""Module that implements kernel expansion grammar as defined by Duvenaud et al."""
 import logging
-from typing import List
+from typing import List, Optional
 
 import gpflow
 
 from ..._kernels import BASE_KERNELS
 
 
-_IMPLEMENTED_KERNEL_NAMES = ['linear', 'periodic', 'rbf', 'white', 'constant']
-_IMPLEMENTED_KERNELS = [BASE_KERNELS[k_name] for k_name in _IMPLEMENTED_KERNEL_NAMES]
+IMPLEMENTED_BASE_KERNEL_NAMES = ['constant', 'linear', 'periodic', 'rbf', 'white']
+_IMPLEMENTED_BASE_KERNELS = [BASE_KERNELS[k_name] for k_name in IMPLEMENTED_BASE_KERNEL_NAMES]
 _LOGGER = logging.getLogger(__package__)
 
 
-def expand_kernel(kernel: gpflow.kernels.Kernel) -> List[gpflow.kernels.Kernel]:
+def expand_kernel(kernel: gpflow.kernels.Kernel, base_kernels_to_exclude: Optional[List[str]]=None) -> List[gpflow.kernels.Kernel]:
     """Generate a list of kernels that represent all possible one step alterations of a kernel.
 
     All rules for extension are from Appendix C of `Automatic Model Construction with Gaussian Processes`.
@@ -22,6 +23,12 @@ def expand_kernel(kernel: gpflow.kernels.Kernel) -> List[gpflow.kernels.Kernel]:
     ----------
     kernel: gpflow.kernels.Kernel
         GPflow kernel object to be expanded.
+
+    base_kernels_to_exclude: Optional[List[str]]
+        Kernels can be excluded from taking the role of `base_kernel`. This can for example
+        be used to prevent the constant kernel from being chosen for all time series with few
+        data points and `0` mean.
+        Kernels are excluded using their names.
 
     Returns
     -------
@@ -43,12 +50,19 @@ def expand_kernel(kernel: gpflow.kernels.Kernel) -> List[gpflow.kernels.Kernel]:
         Changepoints and changewindows are not yet implemented.
 
     """
+    if base_kernels_to_exclude is None:
+        base_kernels_to_exclude = []
+
     kernel_alterations: List[gpflow.kernels.Kernel] = [kernel]
 
     # C3, C8
-    kernel_alterations.extend(base_kernel(1) for base_kernel in _IMPLEMENTED_KERNELS)
+    kernel_alterations.extend(base_kernel(1) for base_kernel in _IMPLEMENTED_BASE_KERNELS)
 
-    for base_kernel in _IMPLEMENTED_KERNELS:
+    for base_kernel in _IMPLEMENTED_BASE_KERNELS:
+        if base_kernel.__name__.lower() in base_kernels_to_exclude or kernel.name.lower() in base_kernels_to_exclude:
+            # More complex combinations of excluded base kernels are harder to filter out later.
+            # Thus it is better to exclude them right away.
+            continue
         kernel_alterations.extend([
             kernel + base_kernel(1),                                  # C1
             kernel * base_kernel(1),                                  # C2
@@ -58,7 +72,8 @@ def expand_kernel(kernel: gpflow.kernels.Kernel) -> List[gpflow.kernels.Kernel]:
     # C9, C10
     kernel_alterations.extend(_expand_combinations(kernel))
 
-    return kernel_alterations
+    return [kernel_alteration for kernel_alteration in kernel_alterations
+            if kernel_alteration.name.lower() not in base_kernels_to_exclude]
 
 
 def _expand_combinations(kernel: gpflow.kernels.Kernel) -> List[gpflow.kernels.Kernel]:

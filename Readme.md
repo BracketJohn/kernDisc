@@ -47,6 +47,9 @@ All metrics MUST be minimization problems, i.e., be better when lower.
 To define a new grammar, please create a new module in `kerndisc.expansion.grammars` called `_grammar_*.py`. This new module MUST offer:
 
 * `expand_kernel`: A method that takes a single gpflow kernel and applies desired alterations to it.
+* `IMPLEMENTED_BASE_KERNEL_NAMES`: A global `List[str]`, which contains only `BASE_KERNELS.keys()` from `_kernels.py`.
+  The base kernels in this list represent all kernels implemented by the respective grammar.
+
 
 Once your custom grammar is created, you can select it by adding it to the `_GRAMMARS` dictionary in `kerndisc.expansion.grammars.__init__.py` and then setting the environment variable `GRAMMAR` to your grammars name.
 

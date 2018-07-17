@@ -1,15 +1,15 @@
 r"""Package to evaluate performance of kernels.
 
 This package provides:
-    * The `evaluate` method, which builds kernels from ASTs, then trains and scores them.
+    * The `evaluate_asts` method, which builds kernels from ASTs, then trains and scores them.
 
 Example
 -------
 To evaluate ASTs run:
 ```
     > from kerndisc.description import pretty_ast
-    > from kerndisc.evaluation import evaluate
-    > for ast, score in evaluate(X, Y, asts):
+    > from kerndisc.evaluation import evaluate_asts
+    > for ast, model_params, score in evaluate_asts(X, Y, asts):
     >     print(f'Ast\n`{pretty_ast(ast)}`\nhas scored `{score:.2f}`.')
 ```
 
@@ -19,8 +19,8 @@ the bayesian information criterion.
 
 """
 
-from ._evaluate import evaluate
+from ._evaluate import evaluate_asts
 
 __all__ = [
-    'evaluate',
+    'evaluate_asts',
 ]

@@ -1,6 +1,7 @@
 from random import randint
 
-from kerndisc._util import n_best_scored_kernels
+from kerndisc._util import build_all_implemented_base_asts, n_best_scored_kernels
+from kerndisc.expansion.grammars._grammar_duvenaud import IMPLEMENTED_BASE_KERNEL_NAMES
 
 
 def test_n_best_scored_kernels():
@@ -25,3 +26,10 @@ def test_n_best_scored_kernels():
         } for score in range(200)}
 
     assert n_best_scored_kernels(more_scores, n=len(more_scores)) == list(range(200))
+
+
+def test_build_all_implemented_base_asts():
+    base_asts = build_all_implemented_base_asts()
+    baste_ast_names = [node.name.__name__.lower() for node in base_asts]
+
+    assert set(baste_ast_names) == set(IMPLEMENTED_BASE_KERNEL_NAMES)
