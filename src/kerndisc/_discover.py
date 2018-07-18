@@ -62,7 +62,7 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
                     'ast': ast_of_kernel,
                     'score': some_float_score,
                     'depth': depth_kernel_constructed_at,
-                    'model_params': {
+                    'params': {
                         'param_name_one': param_value_one,
                         ...
                     }
@@ -78,7 +78,7 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
     scored_kernels = {
         ast_to_text(_START_AST): {
             'ast': _START_AST,
-            'model_params': {},
+            'params': {},
             'score': np.Inf,
             'depth': 0,
         },
@@ -107,11 +107,11 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
 
         _LOGGER.info(f'Depth `{depth}`: Scoring unscored kernels.')
 
-        for ast, model_params, score in evaluate_asts(x, y, unscored_asts):
+        for ast, params, score in evaluate_asts(x, y, unscored_asts):
             scored_kernels[ast_to_text(ast)] = {
                 'ast': ast,
                 'depth': depth,
-                'model_params': model_params,
+                'params': params,
                 'score': score,
             }
 
