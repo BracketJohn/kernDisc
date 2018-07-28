@@ -6,8 +6,7 @@ name = "pypi"
 [packages]
 gpflow = "==1.1.1"
 numpy = "*"
-lark-parser = "*"
-tensorflow = "*"
+tensorflow = ">=1.5.0"
 anytree = "*"
 
 [dev-packages]
