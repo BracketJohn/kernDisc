@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-gpflow = "*"
+gpflow = "==1.1.1"
 numpy = "*"
 lark-parser = "*"
 tensorflow = "*"
