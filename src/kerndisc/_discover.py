@@ -107,11 +107,11 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
 
         _LOGGER.info(f'Depth `{depth}`: Scoring unscored kernels.')
 
-        for ast, params, score in evaluate_asts(x, y, unscored_asts):
+        for ast, optimized_params, score in evaluate_asts(x, y, unscored_asts):
             scored_kernels[ast_to_text(ast)] = {
                 'ast': ast,
                 'depth': depth,
-                'params': params,
+                'params': optimized_params,
                 'score': score,
             }
 
