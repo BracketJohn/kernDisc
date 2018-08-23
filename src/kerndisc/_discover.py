@@ -79,6 +79,7 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
 
     """
     x, y = preprocess(x, y, rescale_x_to_upper_bound=rescale_x_to_upper_bound)
+    termination_reason = f'Depth `{search_depth - 1}`: Maximum search depth reached.'
     highscore_progression: List[float] = []
     scored_kernels = {
         ast_to_text(_START_AST): {
@@ -96,9 +97,11 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
 
         if best_previous_kernels:
             highscore_progression.append(scored_kernels[best_previous_kernels[0]]['score'])
-        if (early_stopping_min_rel_delta and len(highscore_progression) > 1 and
-            calculate_relative_improvement(highscore_progression) < early_stopping_min_rel_delta):
-            break
+        if early_stopping_min_rel_delta and len(highscore_progression) > 1:
+            improvement = calculate_relative_improvement(highscore_progression)
+            if improvement < early_stopping_min_rel_delta:
+                termination_reason = f'Depth `{depth}`: Early stopping, improvement was `{improvement}`, below threshold `{early_stopping_min_rel_delta}`.'
+                break
 
         _LOGGER.info(f'Depth `{depth}`: Kernel discovery with `{kernels_per_depth}` best performing kernels '
                      f'of last iteration: `{best_previous_kernels}`, '
@@ -114,6 +117,7 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
 
         unscored_asts = [ast for ast in new_asts if ast_to_text(ast) not in scored_kernels]
         if not unscored_asts:
+            termination_reason = f'Depth `{depth}`: Emptry search space, no new asts found.'
             break
 
         _LOGGER.info(f'Depth `{depth}`: Scoring unscored kernels.')
@@ -126,6 +130,10 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
                 'score': score,
             }
 
-    _LOGGER.info('Done with search.')
+    _LOGGER.info(f'Done with search, termination reason was:\n\n\t{termination_reason}\n')
 
-    return {kernel_name: scored_kernels[kernel_name] for kernel_name in n_best_scored_kernels(scored_kernels, n=find_n_best)}
+    return {
+        **{kernel_name: scored_kernels[kernel_name] for kernel_name in n_best_scored_kernels(scored_kernels, n=find_n_best)},
+        'highscore_progression': highscore_progression,
+        'termination_reason': termination_reason,
+    }
