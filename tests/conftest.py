@@ -111,6 +111,8 @@ def are_asts_equal():
         lvl_order_ast_two = list(LevelOrderIter(ast_two))
         if len(lvl_order_ast_one) != len(lvl_order_ast_two):
             return False
+        # if lvl_order_ast_one != lvl_order_ast_two:
+        #     return False
         for node_ast, node_kernel_ast in zip(lvl_order_ast_one, lvl_order_ast_one):
             if node_ast.name != node_kernel_ast.name:
                 return False

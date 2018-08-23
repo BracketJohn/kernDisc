@@ -1,7 +1,9 @@
 from random import randint
 
-from kerndisc._util import build_all_implemented_base_asts, n_best_scored_kernels
-from kerndisc.expansion.grammars._grammar_duvenaud import IMPLEMENTED_BASE_KERNEL_NAMES
+import pytest
+
+from kerndisc._util import build_all_implemented_base_asts, calculate_relative_improvement, n_best_scored_kernels  # noqa: I202, I100
+from kerndisc.expansion.grammars._grammar_duvenaud import IMPLEMENTED_BASE_KERNEL_NAMES  # noqa: I202, I100
 
 
 def test_n_best_scored_kernels():
@@ -33,3 +35,31 @@ def test_build_all_implemented_base_asts():
     baste_ast_names = [node.name.__name__.lower() for node in base_asts]
 
     assert set(baste_ast_names) == set(IMPLEMENTED_BASE_KERNEL_NAMES)
+
+
+def test_calculate_relative_improvement():
+    for highscores in [[], [1]]:
+        with pytest.raises(ValueError) as ex:
+            calculate_relative_improvement(highscores)
+        assert str(ex.value) == f'Passed `{highscores}` with less than 2 elements to calculate relative improvement.'
+
+    highscores = [0, 100, 90]
+    assert calculate_relative_improvement(highscores) == 0.1
+
+    highscores = [10, 10]
+    assert calculate_relative_improvement(highscores) == 0
+
+    highscores = [-5, -5]
+    assert calculate_relative_improvement(highscores) == 0
+
+    for _ in range(10):
+        cur_score, prev_score = randint(-1000, 1000), randint(-1000, 1000)
+        abs_diff = abs(prev_score - cur_score)
+
+        if cur_score <= prev_score:
+            rel_diff = abs_diff / abs(prev_score)
+        else:
+            rel_diff = -abs_diff / abs(cur_score)
+
+        highscores = [prev_score, cur_score]
+        assert calculate_relative_improvement(highscores) == rel_diff

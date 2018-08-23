@@ -1,12 +1,12 @@
 """Module to run kernel discovery."""
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import gpflow
 import numpy as np
 
 from ._preprocessing import preprocess
-from ._util import build_all_implemented_base_asts, n_best_scored_kernels
+from ._util import build_all_implemented_base_asts, calculate_relative_improvement, n_best_scored_kernels
 from .description import ast_to_text, kernel_to_ast
 from .evaluation import evaluate_asts
 from .expansion import expand_asts
@@ -19,7 +19,7 @@ _START_AST = kernel_to_ast(gpflow.kernels.White(1))
 
 def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_upper_bound: Optional[float]=None,
              kernels_per_depth: int=1, find_n_best: int=1, full_initial_base_kernel_expansion=False,
-             grammar_kwargs: Optional[Dict[str, Any]]=None) -> Dict[str, Dict[str, Any]]:
+             early_stopping_min_rel_delta: Optional[float]=None, grammar_kwargs: Optional[Dict[str, Any]]=None) -> Dict[str, Dict[str, Any]]:
     """Discover kernel structure in a univariate time series.
 
     Parameters
@@ -48,6 +48,10 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
     full_initial_base_kernel_expansion: bool
         Whether to expand the full set of implemented kernels in the first iteration.
 
+    early_stopping_min_rel_delta: Optional[float]
+        Wheter to employ early stopping. If set early stopping is employed once the score of the current
+        iteration doesn't improve by at least `early_stopping_min_rel_delta *` percent.
+
     grammar_kwargs: Optional[Dict[str, Any]]
         Options to be passed to grammars to allow different configurations for manually implemented
         grammars.
@@ -75,6 +79,7 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
 
     """
     x, y = preprocess(x, y, rescale_x_to_upper_bound=rescale_x_to_upper_bound)
+    highscore_progression: List[float] = []
     scored_kernels = {
         ast_to_text(_START_AST): {
             'ast': _START_AST,
@@ -88,6 +93,12 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
                  f'The following grammar kwargs were passed:\n{grammar_kwargs or {}}')
     for depth in range(search_depth):
         best_previous_kernels = n_best_scored_kernels(scored_kernels, n=kernels_per_depth)
+
+        highscore_progression.append(scored_kernels[best_previous_kernels[0]]['score'])
+        if (early_stopping_min_rel_delta and
+            len(highscore_progression) > 1 and
+            calculate_relative_improvement(highscore_progression) < early_stopping_min_rel_delta):
+            break
 
         _LOGGER.info(f'Depth `{depth}`: Kernel discovery with `{kernels_per_depth}` best performing kernels '
                      f'of last iteration: `{best_previous_kernels}`, '
