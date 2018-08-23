@@ -94,9 +94,9 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
     for depth in range(search_depth):
         best_previous_kernels = n_best_scored_kernels(scored_kernels, n=kernels_per_depth)
 
-        highscore_progression.append(scored_kernels[best_previous_kernels[0]]['score'])
-        if (early_stopping_min_rel_delta and
-            len(highscore_progression) > 1 and
+        if best_previous_kernels:
+            highscore_progression.append(scored_kernels[best_previous_kernels[0]]['score'])
+        if (early_stopping_min_rel_delta and len(highscore_progression) > 1 and
             calculate_relative_improvement(highscore_progression) < early_stopping_min_rel_delta):
             break
 

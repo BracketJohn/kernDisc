@@ -3,7 +3,6 @@ from typing import Any, Dict, List
 
 from anytree import Node
 import gpflow
-import numpy as np
 
 from ._kernels import BASE_KERNELS
 from .description import kernel_to_ast
