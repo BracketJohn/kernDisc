@@ -21,12 +21,12 @@ def n_best_scored_kernels(scored_kernels: Dict[str, Dict[str, Any]], n: int=1) -
         Scored kernels structured like:
         ```
         {
-            kernel_expression_1: {
+            kernel_ast_1: {
                 'score': score_1,
                 ...
             },
             ...,
-            kernel_expression_n: {
+            kernel_ast_n: {
                 'score': score_n,
                 ...
             },

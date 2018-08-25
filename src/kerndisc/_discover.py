@@ -18,7 +18,7 @@ _START_AST = kernel_to_ast(gpflow.kernels.White(1))
 
 
 def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_upper_bound: Optional[float]=None,
-             kernels_per_depth: int=1, find_n_best: int=1, full_initial_base_kernel_expansion=False,
+             max_kernels_per_depth: Optional[int]=1, find_n_best: int=1, full_initial_base_kernel_expansion: bool=False,
              early_stopping_min_rel_delta: Optional[float]=None, grammar_kwargs: Optional[Dict[str, Any]]=None) -> Dict[str, Dict[str, Any]]:
     """Discover kernel structure in a univariate time series.
 
@@ -30,17 +30,19 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
     y: np.ndarray
         Values `y_1, ..., y_n` measured at time points `x_1, ..., x_n`.
 
+    search_depth: int
+        Number of times that kernels are expanded before best performing kernel is chosen.
+
     rescale_x_to_upper_bound: Optional[float]
         Rescale `x` to the range `[x.min() / x.max(), 1] * rescale_x_to_upper_bound`. This
         rescaling can lead to improvements for sparse time series with large intervals.
         See `_preprocessing` for more on this.
 
-    search_depth: int
-        Number of times that kernels are expanded before best performing kernel is chosen.
-
-    kernels_per_depth: int
-        Number of kernels that are expanded at each search depth, ususally selected by best performance.
-        `kernels_per_depth = 1` performs a greedy search.
+    max_kernels_per_depth: int
+        Maximum number of kernels that are expanded at each search depth, ususally selected by best performance. Noteworthy options:
+            * `max_kernels_per_depth=1` -> performs a greedy search,
+            * `max_kernels_per_depth=None` -> no limit on kernels per depth.
+        Standard is greedy search.
 
     find_n_best: int
         `n` best kernels to be returned after search.
@@ -93,17 +95,22 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
     _LOGGER.info(f'Depth `0`: Starting kernel structure discovery, using implemented kernels: `{IMPLEMENTED_BASE_KERNEL_NAMES}`. '
                  f'The following grammar kwargs were passed:\n{grammar_kwargs or {}}')
     for depth in range(search_depth):
-        best_previous_kernels = n_best_scored_kernels(scored_kernels, n=kernels_per_depth)
+        if max_kernels_per_depth is None:
+            best_previous_kernels = list(scored_kernels)
+        else:
+            best_previous_kernels = n_best_scored_kernels(scored_kernels, n=max_kernels_per_depth)
 
         if best_previous_kernels:
             highscore_progression.append(scored_kernels[best_previous_kernels[0]]['score'])
+
         if early_stopping_min_rel_delta and len(highscore_progression) > 1:
             improvement = calculate_relative_improvement(highscore_progression)
             if improvement < early_stopping_min_rel_delta:
-                termination_reason = f'Depth `{depth}`: Early stopping, improvement was `{improvement}`, below threshold `{early_stopping_min_rel_delta}`.'
+                termination_reason = (f'Depth `{depth}`: Early stopping, improvement was `{improvement * 100:.2f}%`, '
+                                      f'below threshold `{early_stopping_min_rel_delta * 100:.2f}%`.')
                 break
 
-        _LOGGER.info(f'Depth `{depth}`: Kernel discovery with `{kernels_per_depth}` best performing kernels '
+        _LOGGER.info(f'Depth `{depth}`: Kernel discovery with limit of `{max_kernels_per_depth}` best performing kernels '
                      f'of last iteration: `{best_previous_kernels}`, '
                      f'with scores: `{[scored_kernels[kernel_name]["score"] for kernel_name in best_previous_kernels]}`.')
 
