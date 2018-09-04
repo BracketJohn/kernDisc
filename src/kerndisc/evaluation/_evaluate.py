@@ -117,7 +117,7 @@ def _make_evaluator(x: np.ndarray, y: np.ndarray, add_jitter: bool) -> Callable:
             try:
                 optimizer.minimize(model)
             except tf.errors.InvalidArgumentError:
-                _LOGGER.debug(f'Cholesky decomposition failed for: {ast}.')
+                _LOGGER.debug(f'Cholesky decomposition failed for:\n{pretty_ast(ast)}.')
                 return model, np.Inf
 
             return model, score_model(model)

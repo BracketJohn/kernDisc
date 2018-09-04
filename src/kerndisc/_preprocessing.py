@@ -67,7 +67,7 @@ def _rescale_x(x: np.ndarray, rescale_x_to_upper_bound: Optional[float]=None) ->
     ```
     This is done by applying:
     ```
-        x'_i = x_i / x.max() * rescale_x_to_upper_bound
+        x'_i = rescale_x_to_upper_bound * x_i / x.max()
     ```
     to each point `x_i`.
 
