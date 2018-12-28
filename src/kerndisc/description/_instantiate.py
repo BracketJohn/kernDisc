@@ -69,6 +69,6 @@ def instantiate_model_from_ast(x: np.ndarray, y: np.ndarray, ast: Node,
         Instantiated model.
 
     """
-    kernel = ast_to_kernel(ast)
+    kernel = ast_to_kernel(ast, build=True)
 
     return instantiate_model_from_kernel(x, y, kernel, params=params)

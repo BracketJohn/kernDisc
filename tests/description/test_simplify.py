@@ -208,7 +208,7 @@ def test_simplify(kernel_to_tree, are_asts_equal):
     assert not are_asts_equal(ast, simplify(ast))  # Should NOT modify in place.
 
 
-def test_simplify_scores(kernel_to_tree, tree_to_kernel):
+def test_simplify_scores(kernel_to_tree, tree_to_kernel, are_asts_equal):
     x = np.array(list(range(200))).reshape(-1, 1).astype(float)
 
     y = np.random.normal(size=(200, 1))
@@ -225,4 +225,20 @@ def test_simplify_scores(kernel_to_tree, tree_to_kernel):
 
     optimizer.minimize(m_compex)
     optimizer.minimize(m_simple)
-    assert np.allclose(m_compex.compute_log_likelihood(), m_simple.compute_log_likelihood(), atol=1)
+    assert np.allclose(m_compex.compute_log_likelihood(), m_simple.compute_log_likelihood(), atol=1.5)
+
+
+def test_simplify_order(are_asts_equal):
+    """Test whether order is also irrelevant."""
+    ast_one = Node(gpflow.kernels.Sum, full_name='Sum')
+    Node(gpflow.kernels.RBF, parent=ast_one, full_name='rbf')
+    Node(gpflow.kernels.Constant, parent=ast_one, full_name='constant')
+
+    ast_two = Node(gpflow.kernels.Sum, full_name='Sum')
+    Node(gpflow.kernels.Constant, parent=ast_two, full_name='constant')
+    Node(gpflow.kernels.RBF, parent=ast_two, full_name='rbf')
+
+    simpl_one = simplify(ast_one)
+    simpl_two = simplify(ast_two)
+
+    assert are_asts_equal(simpl_one, simpl_two)
