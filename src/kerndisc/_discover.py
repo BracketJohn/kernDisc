@@ -124,7 +124,7 @@ def discover(x: np.ndarray, y: np.ndarray, search_depth: int=10, rescale_x_to_up
 
         unscored_asts = [ast for ast in new_asts if ast_to_text(ast) not in scored_kernels]
         if not unscored_asts:
-            termination_reason = f'Depth `{depth}`: Emptry search space, no new asts found.'
+            termination_reason = f'Depth `{depth}`: Empty search space, no new asts found.'
             break
 
         _LOGGER.info(f'Depth `{depth}`: Scoring unscored kernels.')

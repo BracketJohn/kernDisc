@@ -20,8 +20,22 @@ In the future it is planned to bring down evaluation cost to `O(n^2)`, by employ
 `kerndisc` can be used in the following way:
 
 ```python
+> import numpy as np
 > from kerndisc import discover
-> k = discover(X, Y)
+> X, Y = np.array([0, 1, 2, 3]), np.array([-1, 1, -1, 1])
+> discover(X, Y)
+...
+    Depth `2`: Empty search space, no new asts found.
+
+{'periodic': {'ast': Node("/<class 'gpflow.kernels.Periodic'>", full_name='Periodic'),
+  'depth': 0,
+  'params': {'GPR/kern/variance': array(1.00037322),
+   'GPR/kern/lengthscales': array(0.09897968),
+   'GPR/kern/period': array(0.66666667),
+   'GPR/likelihood/variance': array(1.00000004e-06)},
+  'score': -11.34804081379194},
+ 'highscore_progression': [inf, -11.34804081379194, -11.34804081379194],
+ 'termination_reason': 'Depth `2`: Empty search space, no new asts found.'}
 ```
 
 For scoring the following metrics are available:
