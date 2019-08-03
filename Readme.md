@@ -13,6 +13,8 @@ Search and description of kernels is heavily inspired by the PhD thesis of [Davi
 
 In the future it is planned to bring down evaluation cost to `O(n^2)`, by employing upper, lower bound estimation as introduced by [Kim et al.](https://arxiv.org/abs/1706.02524).
 
+Currently, this library (development) is in idle mode, however, this is expected to change if there is any interest from the community in this.
+
 ## Installation
 
 `kerndisc` can be installed in the following way on mac:
